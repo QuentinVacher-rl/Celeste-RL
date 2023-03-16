@@ -126,7 +126,7 @@ class CelesteEnv():
                 time.sleep(1)
 
         # Run the tas file
-        requests.get("http://localhost:32270/tas/playtas?filePath=D:\\Taffe\\perso\\Celeste - Rework\\file.tas")
+        requests.get("http://localhost:32270/tas/playtas?filePath={}".format(self.config.path_tas_file))
 
         # Fast Forward to the end of the action to save execution time
         requests.get("http://localhost:32270/tas/sendhotkey?id=FastForwardComment")
@@ -211,7 +211,7 @@ class CelesteEnv():
             file.write(self.config.init_tas_file)
 
         # Run it
-        requests.get("http://localhost:32270/tas/playtas?filePath=D:\\Taffe\\perso\\Celeste - Rework\\file.tas")
+        requests.get("http://localhost:32270/tas/playtas?filePath={}".format(self.config.path_tas_file))
 
         # Wait a bit, again..
         time.sleep(0.06)

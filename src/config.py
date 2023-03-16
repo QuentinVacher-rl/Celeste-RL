@@ -44,6 +44,9 @@ class Config:
         # Tas file to run for init the first screen
         self.init_tas_file = "console load 1 1\n   95\n\n# end\n   1"
 
+        # Path of TAS file
+        self.path_tas_file = "D:\\Taffe\\perso\\Celeste\\file.tas"
+
         # Size of the screenshoted image after pooling
         self.size_image = np.array([45,80, 3])
 
