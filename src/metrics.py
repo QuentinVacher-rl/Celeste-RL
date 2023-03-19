@@ -19,12 +19,12 @@ class Metrics:
 
         # Array of shape 3 to indicate the time Madeline pass the level, died, or juste finished with max iteration
         self.info_level = {
-            "Death": [0],
-            "Level passed": [0],
             "Unfinished": [0],
             "Step 1": [0],
             "Step 2": [0],
-            "Step 3": [0]
+            "Step 3": [0],
+            "Death": [0],
+            "Level passed": [0]
         }
 
         # list to store all the rewards gotten
@@ -59,7 +59,7 @@ class Metrics:
         self.all_reward.append(mean_reward)
 
         # Check death
-        if reward[-1] == self.config.reward_death:
+        if reward[-1] == self.config.reward_death and len(reward) < self.config.max_steps:
             self.info_level["Death"][-1] += 1
 
         # Else check level passed
@@ -122,7 +122,7 @@ class Metrics:
 
         # Get the current episode compare to the value test
         print_reward = episode % self.config.val_test if episode % self.config.val_test != 0 else self.config.val_test
-        end = "\n" if episode % self.config.val_test == 0 or True else "\r"
+        end = "\n" if episode % self.config.val_test == 0 else "\r"
 
         # Print the graph
         print("Time : {}, episode : {}, reward last {} ep {}, reward ep {}, max mean reward {}, epsilon {}, nb step {}   ".format(
@@ -167,7 +167,7 @@ class Metrics:
         # Ajouter une légende pour le premier graphique
         axs[0].legend(loc="upper left")
 
-        # Tracer la courbe pour le deuxième graphique
+        # Tracer les courbe pour le deuxième graphique
         for key, value in self.info_level.items():
             percentage_value = np.array(value) * 100 / self.config.val_test
             axs[1].plot(percentage_value, label=key, color=self.config.color_graph[key])
