@@ -64,8 +64,10 @@ class MultiQNetwork():
             input_layer = Input(shape=(self.state_size,))
 
             # Create the main branch of the model
-            dense1 = Dense(128, activation='relu')(input_layer)
-            dense2 = Dense(64, activation='relu')(dense1)
+            dense1 = Dense(512, activation='relu')(input_layer)
+            dense2 = Dense(1024, activation='relu')(dense1)
+            dense3 = Dense(1024, activation='relu')(dense2)
+            final_dense = Dense(64, activation='relu')(dense3)
 
 
 
@@ -73,16 +75,15 @@ class MultiQNetwork():
         elif self.type_model == "CNN_MLP":
 
             # Input for image
-            input_img = Input(shape=(self.size_image))
+            input_img = Input(shape=self.size_image)
 
             # CNN Layers
             conv1 = Conv2D(32, (3, 3), activation='relu')(input_img)
             pool2 = MaxPooling2D(pool_size=(2, 2))(conv1)
-            conv2 = Conv2D(16, (3, 3), activation='relu')(pool2)
+            conv2 = Conv2D(32, (3, 3), activation='relu')(pool2)
             pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
-            conv3 = Conv2D(8, (3, 3), activation='relu')(pool2)
-            pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
-            flatten1 = Flatten()(pool3)
+            conv3 = Conv2D(16, (3, 3), activation='relu')(pool2)
+            flatten1 = Flatten()(conv3)
 
             # Input for classic infos
             input_gps = Input(shape=(self.state_size,))
@@ -91,8 +92,8 @@ class MultiQNetwork():
             merge = Concatenate()([flatten1, input_gps])
 
             # Create the main branch of the model
-            dense1 = Dense(512, activation='relu')(merge)
-            dense2 = Dense(64, activation='relu')(dense1)
+            dense1 = Dense(1024, activation='relu')(merge)
+            final_dense = Dense(128, activation='relu')(dense1)
 
             # Define the input layer with the two input layers
             input_layer = [input_img, input_gps]
@@ -104,7 +105,7 @@ class MultiQNetwork():
         for current_action_size in self.action_size:
 
             # Add MLP layer only for the proper action
-            cur_dense = Dense(32, activation='relu')(dense2)
+            cur_dense = Dense(32, activation='relu')(final_dense)
 
             # Output layer
             outputs.append(Dense(current_action_size, activation='sigmoid')(cur_dense))
@@ -242,7 +243,7 @@ class MultiQNetwork():
         """
         if cur_episode % self.config.nb_episode_lr_decay == 0:
             self.cur_lr *= self.config.lr_decay
-            tf.keras.backend.set_value(self.q_network.optimizer.learning_rate, self.cur_lr)
+            tf.keras.backend.set_value(self.q_network.optimizer.learning_rate, max(self.cur_lr, self.config.min_lr))
 
 
 

@@ -32,6 +32,9 @@ class Metrics:
         # Get the current time
         self.init_time = time.time()
 
+        # Quantity of step passed
+        self.nb_total_step = 0
+
     def done_with_level_finished(self):
         """Increase the number of level finished
         """
@@ -59,6 +62,9 @@ class Metrics:
         Returns:
             bool: True if there is a new max reward, else False
         """
+        # Actualise the total number of steps
+        self.nb_total_step += nb_step_done
+
         # Get the mean of the reward
         reward /= nb_step_done
 
@@ -118,13 +124,14 @@ class Metrics:
         end = "\n" if episode % self.val_test == 0 else "\r"
 
         # Print the graph
-        print("Time : {}, episode : {}, reward last {} ep {}, reward ep {}, max mean reward {}, epsilon {}   ".format(
+        print("Time : {}, episode : {}, reward last {} ep {}, reward ep {}, max mean reward {}, epsilon {}, nb step {}   ".format(
             time_spend,
             episode,
             print_reward,
             np.round(np.mean(self.all_reward[-print_reward:]), 2),
             np.round(self.all_reward[-1], 2), np.round(self.max_mean_reward, 2),
-            np.round(epsilon,3)
+            np.round(epsilon,3),
+            self.nb_total_step
         ), end=end)
 
     def print_result(self):

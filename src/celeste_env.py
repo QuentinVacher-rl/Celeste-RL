@@ -5,7 +5,7 @@ import time
 import requests
 from bs4 import BeautifulSoup
 import numpy as np
-from scipy.signal import convolve2d
+import tensorflow as tf
 import dxcam
 
 from config import Config
@@ -64,7 +64,6 @@ class CelesteEnv():
         # Object initiate for screen shot
         if config.use_image:
             self.camera = dxcam.create()
-
 
     def step(self, actions):
         """Step method
@@ -126,10 +125,10 @@ class CelesteEnv():
                 time.sleep(1)
 
         # Run the tas file
-        requests.get("http://localhost:32270/tas/playtas?filePath={}".format(self.config.path_tas_file))
+        requests.get("http://localhost:32270/tas/playtas?filePath={}".format(self.config.path_tas_file), timeout=5)
 
         # Fast Forward to the end of the action to save execution time
-        requests.get("http://localhost:32270/tas/sendhotkey?id=FastForwardComment")
+        requests.get("http://localhost:32270/tas/sendhotkey?id=FastForwardComment", timeout=5)
 
 
         # Get observation and done info
@@ -211,13 +210,13 @@ class CelesteEnv():
             file.write(self.config.init_tas_file)
 
         # Run it
-        requests.get("http://localhost:32270/tas/playtas?filePath={}".format(self.config.path_tas_file))
+        requests.get("http://localhost:32270/tas/playtas?filePath={}".format(self.config.path_tas_file), timeout=5)
 
         # Wait a bit, again..
         time.sleep(0.06)
 
         # Fast Forward
-        requests.get("http://localhost:32270/tas/sendhotkey?id=FastForwardComment")
+        requests.get("http://localhost:32270/tas/sendhotkey?id=FastForwardComment", timeout=5)
 
         # Init the game step
         # With the init tas file given, Madeline take it first action at the 6st frame
@@ -235,7 +234,7 @@ class CelesteEnv():
             while "Timer" not in "".join(l_text):
 
                 # Get the information of the game
-                response = requests.get("http://localhost:32270/tas/info")
+                response = requests.get("http://localhost:32270/tas/info", timeout=5)
 
                 # Get the corresponding text
                 l_text = BeautifulSoup(response.content, "html.parser").text.split("\n")
@@ -313,48 +312,21 @@ class CelesteEnv():
         # It is not really usefull for the IA, only if you want to save the screen
         frame = frame[:, :, ::-1]
 
+        # Add a new axis (for the RL model)
+        frame = frame[np.newaxis, ...]
+
         # This line is used for save the screen, you have to import cv2 also
         #cv2.imwrite('screen.png', frame)
 
+        # Definition of pooling size to reduce the size of the image
+        pooling_size = 12
 
-        # Definition of block size to reduce the size of the image
-        block_size = 12
-
-        # Calcul new shape
-        height, width, _ = frame.shape
-        new_h = (height + block_size - 1) // block_size * block_size
-        new_w = (width + block_size - 1) // block_size * block_size
-
-        # add padding
-        top_pad = (new_h - height) // 2
-        bottom_pad = new_h - height - top_pad
-        left_pad = (new_w - width) // 2
-        right_pad = new_w - width - left_pad
-        frame_padded = np.pad(frame, ((top_pad, bottom_pad), (left_pad, right_pad), (0, 0)), mode='constant')
-
-        # Definition of convolution mask for max pooling
-        mask = np.ones((block_size, block_size, 3))
-        mask /= block_size * block_size
-
-        # Calcul of max pooling with the convolution method
-        new_img = np.zeros((new_h // block_size, new_w // block_size, 3), dtype=np.uint8)
-        for color in range(3):
-            pooled = convolve2d(frame_padded[:, :, color], mask[:, :, color], mode='valid')
-            new_img[:, :, color] = np.round(np.abs(pooled[::block_size, ::block_size]))
-
-        # Convertion of the datatype
-        new_img = new_img.astype(np.uint8)
-
-        # Delete the padding
-        new_img = new_img[top_pad//block_size:new_h//block_size-top_pad//block_size,
-                        left_pad//block_size:new_w//block_size-left_pad//block_size]
+        frame = tf.nn.max_pool(frame, ksize=pooling_size, strides=pooling_size, padding='SAME').numpy()
 
         # Normalize the screen
-        screen = new_img / 255
+        frame = frame / 255
 
-        # Add a new axis (for the RL model)
-        screen = screen[np.newaxis, ...]
-        return screen
+        return frame
 
 
     def get_madeline_info(self):
@@ -379,7 +351,7 @@ class CelesteEnv():
             time.sleep(0.03)
 
             # Get the info of Celeste
-            response = requests.get("http://localhost:32270/tas/info")
+            response = requests.get("http://localhost:32270/tas/info", timeout=5)
 
             # Get the corresponding text
             l_text = BeautifulSoup(response.content, "html.parser").text.split("\n")
@@ -424,27 +396,17 @@ class CelesteEnv():
         done = False
 
         # Reset mid step reached at False
-        self.mid_step_reached = False
+        self.step_reached = 0
 
         # If reward step is reached
-        if (
-                self.pos_x >= self.config.list_step_reward[self.reward_step][0][0]
-                and self.pos_x <= self.config.list_step_reward[self.reward_step][0][1]
-                and self.pos_y >= self.config.list_step_reward[self.reward_step][1][0]
-                and self.pos_y <= self.config.list_step_reward[self.reward_step][1][1]
-        ):
-            done = True
-            self.step_reached = True
-
-        # If mid reward step is reached
-        elif (
-                self.reward_step > 0
-                and self.pos_x >= self.config.list_step_reward[self.reward_step-1][0][0]
-                and self.pos_x <= self.config.list_step_reward[self.reward_step-1][0][1]
-                and self.pos_y >= self.config.list_step_reward[self.reward_step-1][1][0]
-                and self.pos_y <= self.config.list_step_reward[self.reward_step-1][1][1]
-        ):
-            self.mid_step_reached = True
+        for index, step in enumerate(self.config.list_step_reward):
+            if (
+                    self.pos_x >= step[0][0]
+                    and self.pos_x <= step[0][1]
+                    and self.pos_y >= step[1][0]
+                    and self.pos_y <= step[1][1]
+            ):
+                self.step_reached = index + 1
 
         # If dead
         if "Dead" in "".join(l_text[-10:-8]):
@@ -467,13 +429,13 @@ class CelesteEnv():
         if self.dead:
             return 0
 
-        # If step reached, reward is 50
-        if self.step_reached:
+        # If screen passed
+        if self.screen_pasted:
             return 50
 
-        # If mid step reached, reward is 1
-        elif self.mid_step_reached:
-            return 1
+        # If step reached, reward is 50
+        if self.step_reached > 0:
+            return self.step_reached
 
         # Else reward is 0
         return 0

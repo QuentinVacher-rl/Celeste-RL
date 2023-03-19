@@ -45,10 +45,11 @@ class Config:
         self.init_tas_file = "console load 1 1\n   95\n\n# end\n   1"
 
         # Path of TAS file
-        self.path_tas_file = "D:\\Taffe\\perso\\Celeste\\file.tas"
+        self.path_tas_file = "C:\\Code python\\Celeste\\file.tas"
+
 
         # Size of the screenshoted image after pooling
-        self.size_image = np.array([45,80, 3])
+        self.size_image = np.array([45, 80, 3])
 
         # -------------------------------------------
 
@@ -73,7 +74,7 @@ class Config:
 
         # If True, the base size of observation is bigger
         if self.give_former_actions:
-            self.base_observation_size = (self.base_observation_size + len(self.action_size))
+            self.base_observation_size = self.base_observation_size + len(self.action_size)
 
         # Quantity of former iteration state and action (if action given) put if the observation vector
         self.histo_obs = 3
@@ -92,12 +93,8 @@ class Config:
         self.list_step_reward = [
             [[80, 100], [108, 128]],
             [[140, 180], [60, 80]],
-            [[250, 270], [36, 56]],
-            [[250, 290], [-30, 0]],
+            [[250, 270], [36, 56]]
         ]
-
-        # Init goal reward
-        self.reward_step = 1
 
         # True if the image is used for learning
         self.use_image = True
