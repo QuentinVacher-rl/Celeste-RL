@@ -35,9 +35,6 @@ class CelesteEnv():
         # Current step
         self.current_step = 0
 
-        # index of the reward step
-        self.reward_step = config.reward_step
-
         # inGame iteration
         self.game_step = 0
 
@@ -53,13 +50,10 @@ class CelesteEnv():
         self.dead = False
 
         # True if the screen is paster
-        self.screen_pasted = False
+        self.screen_passed = False
 
-        # True if the reward step is reached
-        self.step_reached = False
-
-        # True if the mid-reward step is reached
-        self.mid_step_reached = False
+        # Index of step reached
+        self.step_reached = 0
 
         # Object initiate for screen shot
         if config.use_image:
@@ -197,10 +191,7 @@ class CelesteEnv():
         self.dead = False
 
         # True if the screen is paster
-        self.screen_pasted = False
-
-        # True if the reward step is reached
-        self.step_reached = False
+        self.screen_passed = False
 
         # Wait a bit to avoid problems
         time.sleep(0.017*3)
@@ -259,8 +250,8 @@ class CelesteEnv():
         # If the goal coords are given, put it in the observation vector
         if self.config.give_goal_coords:
             # Get the two coords for X and Y (coords create a square goal)
-            reward_goal_x = np.array(self.config.list_step_reward[self.config.reward_step][0])
-            reward_goal_y = np.array(self.config.list_step_reward[self.config.reward_step][1])
+            reward_goal_x = np.array(self.config.goal[0])
+            reward_goal_y = np.array(self.config.goal[1])
 
             # Make sure to normalize the values
             self.observation[0:2] = (reward_goal_x - self.config.x_min) / (self.config.x_max - self.config.x_min)
@@ -415,7 +406,8 @@ class CelesteEnv():
 
         # If screen pasted. Only on screen 1 for now, will be change later
         if "[2]" in l_text[-8] and self.current_screen == 1:
-            self.screen_pasted = True
+            self.screen_passed = True
+            done = True
 
         return observation, done
 
@@ -425,17 +417,17 @@ class CelesteEnv():
         Returns:
             int: Reward
         """
-        # If dead reward is 0
+        # If dead
         if self.dead:
-            return 0
+            return self.config.reward_death
 
         # If screen passed
-        if self.screen_pasted:
-            return 50
+        if self.screen_passed:
+            return self.config.reward_screen_passed
 
-        # If step reached, reward is 50
+        # If step reached, reward is index of step multiply by the reward for step reached
         if self.step_reached > 0:
-            return self.step_reached
+            return self.step_reached * self.config.reward_step_reached
 
-        # Else reward is 0
-        return 0
+        # Else reward is natural reward
+        return self.config.natural_reward

@@ -64,10 +64,8 @@ class MultiQNetwork():
             input_layer = Input(shape=(self.state_size,))
 
             # Create the main branch of the model
-            dense1 = Dense(512, activation='relu')(input_layer)
-            dense2 = Dense(1024, activation='relu')(dense1)
-            dense3 = Dense(1024, activation='relu')(dense2)
-            final_dense = Dense(64, activation='relu')(dense3)
+            dense1 = Dense(64, activation='relu')(input_layer)
+            final_dense = Dense(64, activation='relu')(dense1)
 
 
 

@@ -36,7 +36,7 @@ class Config:
 
         # Coordinates maximal and minimal of x in 1st screen
         self.y_max = 195
-        self.y_min = 16
+        self.y_min = 0
 
         # Basic waiting time (equal to 1 frame)
         self.sleep = 0.017
@@ -89,15 +89,30 @@ class Config:
         if self.give_goal_coords:
             self.observation_size += 4
 
-        # List of all goal reward
+        # List of all step reward
         self.list_step_reward = [
             [[80, 100], [108, 128]],
             [[140, 180], [60, 80]],
             [[250, 270], [36, 56]]
         ]
 
+        # Reward for death
+        self.reward_death = 0
+
+        # Reward when step reached
+        self.reward_step_reached = 1
+
+        # Reward chen screen passed
+        self.reward_screen_passed = 50
+
+        # Reward when nothing append
+        self.natural_reward = 0
+
+        # Coordonates of the goal
+        self.goal = [[ 250, 280], [0, 0]]
+
         # True if the image is used for learning
-        self.use_image = True
+        self.use_image = False
 
         # -------------------------------------------
 
@@ -108,5 +123,14 @@ class Config:
         # -------------------------------------------
 
         self.val_test = 50
+
+        self.color_graph = {
+            "Death": "#1f77b4",
+            "Level passed": "#2ca02c",
+            "Unfinished": "#ff7f0e",
+            "Step 1": "#d62728",
+            "Step 2": "#9467bd",
+            "Step 3": "#8c564b"
+        }
 
         # -------------------------------------------

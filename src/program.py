@@ -33,7 +33,7 @@ def main():
     while episode <= config.num_episodes:
 
         # Init the episode reward at 0
-        reward_ep = 0
+        reward_ep = list()
 
         # Reset the environnement
         state, available_actions, done = env.reset(1)
@@ -54,29 +54,14 @@ def main():
             state = next_state
 
             # Add the reward to the episode reward
-            reward_ep += reward
-
-            # If the environnement is done
-            if done:
-
-                # If it is done with step reached, activate the correspondig method in metrics
-                if env.step_reached:
-                    metrics.done_with_level_finished()
-
-                # If it is done with death, activate the correspondig method in metrics
-                elif env.dead:
-                    metrics.done_with_death()
-
-            # If it is not done but the last step is reached, activate the correspondig method in metrics
-            elif env.current_step == config.max_steps:
-                metrics.done_with_time()
+            reward_ep.append(reward)
 
 
         # Train the algorithm
         algo.train(episode)
 
         # Insert the metrics
-        save_model = metrics.insert_metrics(reward_ep, episode, env.current_step)
+        save_model = metrics.insert_metrics(reward_ep, episode)
 
         # Save the model (will be True only if new max reward)
         if save_model:

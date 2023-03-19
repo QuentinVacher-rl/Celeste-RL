@@ -14,17 +14,21 @@ class Metrics:
 
     def __init__(self, config: Config) -> None:
 
+        # Save config
+        self.config = config
+
         # Array of shape 3 to indicate the time Madeline pass the level, died, or juste finished with max iteration
-        self.level_passed = np.zeros(3)
+        self.info_level = {
+            "Death": [0],
+            "Level passed": [0],
+            "Unfinished": [0],
+            "Step 1": [0],
+            "Step 2": [0],
+            "Step 3": [0]
+        }
 
         # list to store all the rewards gotten
         self.all_reward = list()
-
-        # calculated data for the graohs
-        self.data_for_print = list()
-
-        # Index to print the graphs
-        self.val_test = config.val_test
 
         # Max reward gotten on each range of val test
         self.max_mean_reward = 0
@@ -35,76 +39,73 @@ class Metrics:
         # Quantity of step passed
         self.nb_total_step = 0
 
-    def done_with_level_finished(self):
-        """Increase the number of level finished
-        """
-        self.level_passed[0] += 1
-
-    def done_with_death(self):
-        """Increase the number of death
-        """
-        self.level_passed[2] += 1
-
-    def done_with_time(self):
-        """Increase the number of episodes ended with time
-        """
-        self.level_passed[1] += 1
-
-
-    def insert_metrics(self, reward: float, episode: int, nb_step_done: int):
+    def insert_metrics(self, reward: list(), episode: int):
         """Insert metrics given
 
         Args:
-            reward (float): mean reward of the episode
+            reward (list): list of rewards of the episode
             episode (int): current episode
-            nb_step_done (int): quantity of steps done
 
         Returns:
             bool: True if there is a new max reward, else False
         """
         # Actualise the total number of steps
-        self.nb_total_step += nb_step_done
+        self.nb_total_step += len(reward)
 
         # Get the mean of the reward
-        reward /= nb_step_done
+        mean_reward = np.mean(reward)
 
         # Add the reward to all the reward
-        self.all_reward.append(reward)
+        self.all_reward.append(mean_reward)
+
+        # Check death
+        if reward[-1] == self.config.reward_death:
+            self.info_level["Death"][-1] += 1
+
+        # Else check level passed
+        elif reward[-1] == self.config.reward_screen_passed:
+            self.info_level["Level passed"][-1] += 1
+
+        # Else maddeline did not finished
+        else:
+            self.info_level["Unfinished"][-1] += 1
+
+        # Check for step reached
+        for index in range(len(self.config.list_step_reward)):
+            # Check is the index is in the reward list
+            if (index + 1) * self.config.reward_step_reached in reward:
+                self.info_level[f"Step {index + 1}"][-1] += 1
+
+
 
         # Init the new max reward to False
         new_max_reward = False
 
+
         # Only print graph is the episode is multiple of value to print
-        if episode % self.val_test == 0:
+        if episode % self.config.val_test == 0:
 
-            # Calcul the purcentage of the array
-            self.level_passed = self.level_passed * 100 / self.val_test
-
-            # Calul the different metrics # TODO modify metrics calculation
-            self.data_for_print.append([
-                np.max(self.all_reward[-self.val_test:]),
-                np.mean(self.all_reward[-self.val_test:]),
-                np.min(self.all_reward[-self.val_test:]),
-                self.level_passed
-            ])
+            # Shape rewards to simplify calculs
+            reshape_rewards = np.array(self.all_reward).reshape(-1, self.config.val_test)
 
             # If we get a new max mean reward
-            if np.mean(self.all_reward[-self.val_test:]) > self.max_mean_reward:
+            if np.mean(reshape_rewards[-1]) > self.max_mean_reward:
 
                 # Save the new max
-                self.max_mean_reward = np.mean(self.all_reward[-self.val_test:])
+                self.max_mean_reward = np.mean(reshape_rewards[-1])
 
                 # Set the value to True to save the model
                 new_max_reward = True
 
             # Do not print the graphs if it is the first iteration (because graphs would be empty)
-            if episode != self.val_test:
+            if episode != self.config.val_test:
 
                 # Print the graphs
-                self.print_result()
+                self.print_result(reshape_rewards)
 
-            # Reset the level passed
-            self.level_passed = np.zeros(3)
+            # Add a new step to the info level
+            for value in self.info_level.values():
+                value.append(0)
 
         return new_max_reward
 
@@ -120,8 +121,8 @@ class Metrics:
         time_spend = time.strftime("%H:%M:%S", time.gmtime(np.round(time.time() - self.init_time)))
 
         # Get the current episode compare to the value test
-        print_reward = episode % self.val_test if episode % self.val_test != 0 else self.val_test
-        end = "\n" if episode % self.val_test == 0 else "\r"
+        print_reward = episode % self.config.val_test if episode % self.config.val_test != 0 else self.config.val_test
+        end = "\n" if episode % self.config.val_test == 0 else "\r"
 
         # Print the graph
         print("Time : {}, episode : {}, reward last {} ep {}, reward ep {}, max mean reward {}, epsilon {}, nb step {}   ".format(
@@ -134,41 +135,27 @@ class Metrics:
             self.nb_total_step
         ), end=end)
 
-    def print_result(self):
+    def print_result(self, rewards: np.ndarray):
         """Generate a graph with the results
         """
-        # TODO change all this
-        data_max = np.zeros(len(self.data_for_print))
-        data_mean = np.zeros(len(self.data_for_print))
-        data_min = np.zeros(len(self.data_for_print))
-        global_current_mean = np.zeros(len(self.data_for_print))
+        mean_curve = np.mean(rewards, axis=1)
+        max_curve = np.max(rewards, axis=1)
+        min_curve = np.min(rewards, axis=1)
 
+        # Calculer la somme cumulée de curve mean
+        global_current_mean = np.cumsum(mean_curve)
 
-        data_win = np.zeros(len(self.data_for_print))
-        data_loose = np.zeros(len(self.data_for_print))
-        data_not_finished = np.zeros(len(self.data_for_print))
-        for index, data in enumerate(self.data_for_print):
-            data_max[index] = data[0]
-            data_mean[index] = data[1]
-            data_min[index] = data[2]
-            data_win[index] = data[3][0]
-            data_not_finished[index] = data[3][1]
-            data_loose[index] = data[3][2]
-
-        # Calculer la somme cumulée de data mean
-        global_current_mean = np.cumsum(data_mean)
-
-        # Calculer la moyenne cumulée de a
-        global_current_mean /= np.arange(1, len(data_mean)+1)
+        # Calculer la moyenne cumulée de la valeur
+        global_current_mean /= np.arange(1, len(mean_curve)+1)
 
 
         # Créer une figure et un axe pour le premier graphique
         _, axs = plt.subplots(1, 2, figsize = (20,10))
 
         # Tracer les courbes pour le premier graphique
-        axs[0].plot(data_max, label="max", color="blue")
-        axs[0].plot(data_mean, label="mean", color="green")
-        axs[0].plot(data_min, label="min", color="red")
+        axs[0].plot(max_curve, label="max", color="blue")
+        axs[0].plot(mean_curve, label="mean", color="green")
+        axs[0].plot(min_curve, label="min", color="red")
         axs[0].plot(global_current_mean, label="Global", color="orange")
 
         # Ajouter les titres et labels d'axes pour le premier graphique
@@ -180,9 +167,9 @@ class Metrics:
         axs[0].legend(loc="upper left")
 
         # Tracer la courbe pour le deuxième graphique
-        axs[1].plot(data_not_finished, label="not finish", color="orange")
-        axs[1].plot(data_loose, label="loos", color="red")
-        axs[1].plot(data_win, label="Win", color="green")
+        for key, value in self.info_level.items():
+            percentage_value = np.array(value) * 100 / self.config.val_test
+            axs[1].plot(percentage_value, label=key, color=self.config.color_graph[key])
 
         # Ajouter les titres et labels d'axes pour le deuxième graphique
         axs[1].set_title("Données graphe win")
