@@ -194,7 +194,7 @@ class CelesteEnv():
         self.screen_passed = False
 
         # Wait a bit to avoid problems
-        time.sleep(0.017*3)
+        time.sleep(self.config.sleep*3)
 
         # Write the tas file
         with open(file="file.tas", mode="w", encoding="utf-8") as file:
@@ -204,7 +204,7 @@ class CelesteEnv():
         requests.get("http://localhost:32270/tas/playtas?filePath={}".format(self.config.path_tas_file), timeout=5)
 
         # Wait a bit, again..
-        time.sleep(0.06)
+        time.sleep(self.config.sleep*3)
 
         # Fast Forward
         requests.get("http://localhost:32270/tas/sendhotkey?id=FastForwardComment", timeout=5)
@@ -213,7 +213,7 @@ class CelesteEnv():
         # With the init tas file given, Madeline take it first action at the 6st frame
         self.game_step = 0
         while self.game_step != 6:
-            time.sleep(0.06)
+            time.sleep(self.config.sleep*3)
 
             # Wait, always wait
 
@@ -335,11 +335,17 @@ class CelesteEnv():
         # Save the former game step
         former_game_step = self.game_step
 
+        # Save first try, wait only if first try is wrong
+        first_try = True
+
         # While the times are the same
         while former_game_step == self.game_step:
 
-            # Wait a bit
-            time.sleep(0.03)
+            # Wait a bit if not first try
+            if not first_try:
+                time.sleep(self.config.sleep)
+
+            first_try = False
 
             # Get the info of Celeste
             response = requests.get("http://localhost:32270/tas/info", timeout=5)

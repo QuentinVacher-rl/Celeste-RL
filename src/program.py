@@ -56,7 +56,6 @@ def main():
             # Add the reward to the episode reward
             reward_ep.append(reward)
 
-
         # Train the algorithm
         algo.train(episode)
 

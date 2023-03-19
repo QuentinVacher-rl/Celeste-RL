@@ -122,7 +122,7 @@ class Metrics:
 
         # Get the current episode compare to the value test
         print_reward = episode % self.config.val_test if episode % self.config.val_test != 0 else self.config.val_test
-        end = "\n" if episode % self.config.val_test == 0 else "\r"
+        end = "\n" if episode % self.config.val_test == 0 or True else "\r"
 
         # Print the graph
         print("Time : {}, episode : {}, reward last {} ep {}, reward ep {}, max mean reward {}, epsilon {}, nb step {}   ".format(
@@ -130,7 +130,8 @@ class Metrics:
             episode,
             print_reward,
             np.round(np.mean(self.all_reward[-print_reward:]), 2),
-            np.round(self.all_reward[-1], 2), np.round(self.max_mean_reward, 2),
+            np.round(self.all_reward[-1], 2),
+            np.round(self.max_mean_reward, 2),
             np.round(epsilon,3),
             self.nb_total_step
         ), end=end)
