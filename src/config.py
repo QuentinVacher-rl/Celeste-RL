@@ -3,6 +3,8 @@
 
 import numpy as np
 
+from screen_info import ScreenInfo
+
 class Config:
     """Class for the general config
     """
@@ -30,24 +32,43 @@ class Config:
         # Number of frames per action
         self.nb_frame_action = 5
 
-        # Coordinates maximal and minimal of x in 1st screen
-        self.x_max = 308
-        self.x_min = 12
+        self.screen_used = [1]
 
-        # Coordinates maximal and minimal of x in 1st screen
-        self.y_max = 195
-        self.y_min = 0
+        # Tas file to run for init the first screen
+        self.init_tas_file = "console load 1 {}\n   95\n\n# end\n   1"
+
+        self.screen_info = [
+            ScreenInfo(
+                screen_id=1,
+                first_frame=6,
+                tas_file=self.init_tas_file,
+                x_max=308, x_min=12,
+                y_max=195, y_min=0,
+                list_step_reward=[[[80, 100], [108, 128]], [[140, 180], [60, 80]], [[250, 270], [36, 56]]],
+                goal=[[ 250, 280], [0, 0]]
+            ),
+            ScreenInfo(
+                screen_id=2,
+                first_frame=58,
+                tas_file=self.init_tas_file,
+                x_max=540, x_min=252,
+                y_max=0, y_min=-190,
+                list_step_reward=[[[350, 370], [-60, -40]], [[430, 460], [-100, -70]], [[515, 540], [-85, -64]]],
+                goal=[[ 516, 540], [-190, -190]]
+            )
+        ]
 
         # Basic waiting time (equal to 1 frame)
         self.sleep = 0.017
 
-        # Tas file to run for init the first screen
-        self.init_tas_file = "console load 1 1\n   95\n\n# end\n   1"
-
         # Path of TAS file
         self.path_tas_file = "C:\\Code python\\Celeste\\file.tas"
 
+        # Reduction factor of image screen
+        self.reduction_factor = 8
 
+        # True to indicate that size image could be wrong
+        self.allow_change_size_image = True
         # Size of the screenshoted image after pooling
         self.size_image = np.array([45, 80, 3])
 
@@ -60,7 +81,7 @@ class Config:
         # -------------------------------------------
 
         # Action size vector
-        self.action_size = np.array([9, 9, 2, 2])
+        self.action_size = np.array([72])
         # 9 for dashes in each direction
         # 9 for right, left, up, down + diagonals
         # 2 for jump
@@ -89,12 +110,12 @@ class Config:
         if self.give_goal_coords:
             self.observation_size += 4
 
-        # List of all step reward
-        self.list_step_reward = [
-            [[80, 100], [108, 128]],
-            [[140, 180], [60, 80]],
-            [[250, 270], [36, 56]]
-        ]
+        # True if the index of the screen is give
+        self.give_screen_value = False
+
+        # Actualise the obseration size
+        if self.give_screen_value:
+            self.observation_size += 1
 
         # Reward for death
         self.reward_death = 0
@@ -103,16 +124,16 @@ class Config:
         self.reward_step_reached = 1
 
         # Reward chen screen passed
-        self.reward_screen_passed = 50
+        self.reward_screen_passed = 100
 
         # Reward when nothing append
         self.natural_reward = 0
 
-        # Coordonates of the goal
-        self.goal = [[ 250, 280], [0, 0]]
-
         # True if the image is used for learning
         self.use_image = False
+
+        # Screen start
+        self.start_screen = 2
 
         # -------------------------------------------
 

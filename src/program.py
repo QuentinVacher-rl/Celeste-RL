@@ -21,12 +21,14 @@ def main():
 
     # Create the environnement
     env = CelesteEnv(config)
+    env.controls_before_start()
 
     # Create the RL algorithm
     algo = MultiQNetwork(config_algo, config)
 
     # Create the metrics instance
     metrics = Metrics(config)
+
 
     # For every episode
     episode = 1
@@ -36,7 +38,7 @@ def main():
         reward_ep = list()
 
         # Reset the environnement
-        state, available_actions, done = env.reset(1)
+        state, available_actions, done = env.reset()
 
         # For each step
         while env.current_step < config.max_steps and not done:
