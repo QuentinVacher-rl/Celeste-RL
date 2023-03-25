@@ -16,10 +16,16 @@ class Config:
         # -------------------------------------------
 
         # Total number of episode
-        self.num_episodes = 100_000
+        self.learning_step = 100
 
         # Max step per episode
-        self.max_steps = 200
+        self.max_steps = 100
+
+        # Train episode per learning step
+        self.nb_train_episode = 100
+
+        # Test episode per learning step
+        self.nb_test_episode = 10
 
         # -------------------------------------------
 
@@ -35,12 +41,13 @@ class Config:
         self.screen_used = [1]
 
         # Tas file to run for init the first screen
-        self.init_tas_file = "console load 1 {}\n   95\n\n# end\n   1"
+        self.init_tas_file = "console load 1 {}\n   38\n\n# end\n   1"
 
         self.screen_info = [
             ScreenInfo(
                 screen_id=1,
-                first_frame=6,
+                start_position = [[19, 144], [90, 128], [160, 80], [260, 56]],
+                first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=308, x_min=12,
                 y_max=195, y_min=0,
@@ -49,6 +56,7 @@ class Config:
             ),
             ScreenInfo(
                 screen_id=2,
+                start_position = [[284, -24], [360, -50], [445, -85], [530, -80]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=540, x_min=252,
@@ -98,7 +106,7 @@ class Config:
             self.base_observation_size = self.base_observation_size + len(self.action_size)
 
         # Quantity of former iteration state and action (if action given) put if the observation vector
-        self.histo_obs = 3
+        self.histo_obs = 1
 
         # Calculate the real size of observation
         self.observation_size = (self.histo_obs + 1) * self.base_observation_size
@@ -118,7 +126,7 @@ class Config:
             self.observation_size += 1
 
         # Reward for death
-        self.reward_death = 0
+        self.reward_death = -1
 
         # Reward when step reached
         self.reward_step_reached = 1
@@ -127,7 +135,7 @@ class Config:
         self.reward_screen_passed = 100
 
         # Reward when nothing append
-        self.natural_reward = 0
+        self.natural_reward = -0.1
 
         # True if the image is used for learning
         self.use_image = False
@@ -153,5 +161,7 @@ class Config:
             "Step 2": "#9467bd",
             "Step 3": "#8c564b"
         }
+
+        self.limit_restore = 3
 
         # -------------------------------------------

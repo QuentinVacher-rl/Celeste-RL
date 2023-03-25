@@ -1,11 +1,13 @@
 """File for the class of the screen info
 """
 
+import random as r
+
 class ScreenInfo:
     """Class of screen info
     """
 
-    def __init__(self, screen_id: int, first_frame: int, tas_file: str,
+    def __init__(self, screen_id: int, start_position: list, first_frame: int, tas_file: str,
                  x_max: float, x_min: float, y_max :float, y_min: float,
                  list_step_reward: list, goal: list):
 
@@ -16,7 +18,7 @@ class ScreenInfo:
         self.first_frame = first_frame
 
         # Tas file to init screen
-        self.init_tas_file = tas_file.format(screen_id)
+        self.init_tas_file = tas_file
 
         # X and Y max and min
         self.x_max = x_max
@@ -26,6 +28,9 @@ class ScreenInfo:
 
         # Step reward to reached
         self.list_step_reward = list_step_reward
+
+        # Position where madeline can start
+        self.start_position = start_position
 
         # Goal to reached
         self.goal = goal
@@ -39,3 +44,10 @@ class ScreenInfo:
         """Normalize the value on y
         """
         return (value - self.y_min) / (self.y_max - self.y_min)
+
+    def get_random_start(self):
+        """Get random start
+        """
+        coords = r.sample(self.start_position, 1)[0]
+        return self.init_tas_file.format(str(coords[0]) + " " + str(coords[1]))
+

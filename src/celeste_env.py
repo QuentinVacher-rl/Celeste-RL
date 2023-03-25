@@ -94,7 +94,7 @@ class CelesteEnv():
         if actions[1] != 0:
             frame_to_add += ",X"
 
-        if self.action_size.shape[0] > 1 and self.action_size[1] == 9:
+        if len(self.action_size.shape) > 1 and self.action_size[0] == 0:
             if actions[1] == 1 or actions[1] == 2 or actions[1] == 8:
                 frame_to_add += ",R"
             if actions[1] == 4 or actions[1] == 5 or actions[1] == 6:
@@ -149,7 +149,7 @@ class CelesteEnv():
         self.observation[self.index_start_obs:self.config.base_observation_size+self.index_start_obs] = observation
 
         # Create the observation vector
-        obs_vect = [self.observation[np.newaxis, ...]]
+        obs_vect = self.observation[np.newaxis, ...]
 
         # If the image of the game is used
         if self.config.use_image:
@@ -187,7 +187,7 @@ class CelesteEnv():
         self.screen_info = self.config.screen_info[np.random.choice(self.config.screen_used)]
 
         # Init the current tas file
-        self.current_tas_file = self.screen_info.init_tas_file
+        self.current_tas_file = self.screen_info.get_random_start()
 
         # Init the current step
         self.current_step = 0
@@ -203,7 +203,7 @@ class CelesteEnv():
 
         # Write the tas file
         with open(file="file.tas", mode="w", encoding="utf-8") as file:
-            file.write(self.screen_info.init_tas_file)
+            file.write(self.current_tas_file)
 
         # Run it
         requests.get("http://localhost:32270/tas/playtas?filePath={}".format(self.config.path_tas_file), timeout=5)
@@ -217,7 +217,7 @@ class CelesteEnv():
         # Init the game step
         # With the init tas file given, Madeline take it first action at the 6st frame
         self.game_step = 0
-        while self.game_step != self.screen_info.first_frame:
+        while self.game_step == 0:
             time.sleep(self.config.sleep*3)
 
             # Wait, always wait
@@ -269,7 +269,7 @@ class CelesteEnv():
             self.observation[index_start:index_end] = observation
 
         # Create the observation vector
-        obs_vect = [self.observation[np.newaxis, ...]]
+        obs_vect = self.observation[np.newaxis, ...]
 
         # If the image of the game is used
         if self.config.use_image:
@@ -450,7 +450,7 @@ class CelesteEnv():
             return self.config.reward_screen_passed
 
         # If step reached, reward is index of step multiply by the reward for step reached
-        if self.step_reached > 0:
+        if self.step_reached > 0 and False:
             return self.step_reached * self.config.reward_step_reached
 
         # Else reward is natural reward
