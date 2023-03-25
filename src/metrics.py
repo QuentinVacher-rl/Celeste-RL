@@ -31,13 +31,16 @@ class Metrics:
         self.all_reward = list()
 
         # Max reward gotten on each range of val test
-        self.max_mean_reward = 0
+        self.max_mean_reward = -1 * np.inf
 
         # Get the current time
         self.init_time = time.time()
 
         # Quantity of step passed
         self.nb_total_step = 0
+
+        # Counter for restore model
+        self.counter_restore = 0
 
     def insert_metrics(self, reward: list(), episode: int):
         """Insert metrics given
@@ -71,7 +74,7 @@ class Metrics:
             self.info_level["Unfinished"][-1] += 1
 
         # Check for step reached
-        for index in range(len(self.config.list_step_reward)):
+        for index in range(3):
             # Check is the index is in the reward list
             if (index + 1) * self.config.reward_step_reached in reward:
                 self.info_level[f"Step {index + 1}"][-1] += 1
@@ -80,6 +83,8 @@ class Metrics:
 
         # Init the new max reward to False
         new_max_reward = False
+
+        restore = False
 
 
         # Only print graph is the episode is multiple of value to print
@@ -96,6 +101,13 @@ class Metrics:
 
                 # Set the value to True to save the model
                 new_max_reward = True
+                self.counter_restore = 0
+
+            else:
+                self.counter_restore += 1
+                if self.counter_restore == self.config.limit_restore:
+                    restore = True
+                    self.counter_restore = 0
 
             # Do not print the graphs if it is the first iteration (because graphs would be empty)
             if episode != self.config.val_test:
@@ -107,9 +119,9 @@ class Metrics:
             for value in self.info_level.values():
                 value.append(0)
 
-        return new_max_reward
+        return new_max_reward, restore
 
-    def print_step(self, episode: int, epsilon: float):
+    def print_step(self, episode: int):
         """Print the metrics infos at the current episode
 
         Args:
@@ -125,14 +137,13 @@ class Metrics:
         end = "\n" if episode % self.config.val_test == 0 else "\r"
 
         # Print the graph
-        print("Time : {}, episode : {}, reward last {} ep {}, reward ep {}, max mean reward {}, epsilon {}, nb step {}   ".format(
+        print("Time : {}, episode : {}, reward last {} ep {}, reward ep {}, max mean reward {}, nb step {}   ".format(
             time_spend,
             episode,
             print_reward,
             np.round(np.mean(self.all_reward[-print_reward:]), 2),
             np.round(self.all_reward[-1], 2),
             np.round(self.max_mean_reward, 2),
-            np.round(epsilon,3),
             self.nb_total_step
         ), end=end)
 
