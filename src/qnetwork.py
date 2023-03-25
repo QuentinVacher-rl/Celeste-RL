@@ -64,8 +64,8 @@ class MultiQNetwork():
             input_layer = Input(shape=(self.state_size,))
 
             # Create the main branch of the model
-            dense1 = Dense(64, activation='relu')(input_layer)
-            final_dense = Dense(64, activation='relu')(dense1)
+            dense1 = Dense(128, activation='relu')(input_layer)
+            final_dense = Dense(128, activation='relu')(dense1)
 
 
 
@@ -103,10 +103,10 @@ class MultiQNetwork():
         for current_action_size in self.action_size:
 
             # Add MLP layer only for the proper action
-            cur_dense = Dense(32, activation='relu')(final_dense)
+            cur_dense = Dense(128, activation='relu')(final_dense)
 
             # Output layer
-            outputs.append(Dense(current_action_size, activation='sigmoid')(cur_dense))
+            outputs.append(Dense(current_action_size, activation='relu')(cur_dense))
 
         # Create the model
         model = Model(inputs=input_layer, outputs=outputs)
@@ -154,10 +154,13 @@ class MultiQNetwork():
             actions[index] = np.argmax(actions_probs)
 
             # If action[0] != 0, Madeline is dashing in a direction, so the directional action is desactivate
-            if index == 1 and actions[0] != 0:
-                actions[index] = 0
+            #if index == 1 and actions[0] != 0:
+            #    actions[index] = 0
 
-        return actions
+        
+
+
+        return actions, None, None
 
     def insert_data(self, data: tuple):
         """Insert the data in the memory
@@ -187,8 +190,11 @@ class MultiQNetwork():
         states, actions, rewards, next_states, dones = zip(*r.sample(self.memory, self.config.batch_size))
 
         # Those line switch the vector of shapes (because of the multiple outputs)
+
         states = [np.concatenate([states[i][j] for i in range(len(states))], axis=0) for j in range(len(states[0]))]
         next_states = [np.concatenate([next_states[i][j] for i in range(len(next_states))], axis=0) for j in range(len(next_states[0]))]
+        states = np.array(states).reshape(self.config.batch_size, -1)
+        next_states = np.array(next_states).reshape(self.config.batch_size, -1)
         actions = np.array(actions)
         rewards = np.array(rewards)
         dones = np.array(dones)
