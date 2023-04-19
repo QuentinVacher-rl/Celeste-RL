@@ -2,6 +2,7 @@
 """
 
 import random as r
+import numpy as np
 
 class ScreenInfo:
     """Class of screen info
@@ -25,6 +26,8 @@ class ScreenInfo:
         self.x_min = x_min
         self.y_max = y_max
         self.y_min = y_min
+
+        self.max_distance = np.sqrt(np.square(self.x_max - self.x_min) + np.square(self.x_max - self.x_min))
 
         # Step reward to reached
         self.list_step_reward = list_step_reward
@@ -50,4 +53,20 @@ class ScreenInfo:
         """
         coords = r.sample(self.start_position, 1)[0]
         return self.init_tas_file.format(str(coords[0]) + " " + str(coords[1]))
+
+    def get_true_start(self):
+        """Get the true start
+        """
+        coords = self.start_position[0]
+        return self.init_tas_file.format(str(coords[0]) + " " + str(coords[1]))
+    
+    def distance_goal(self, pos_x, pos_y):
+        """Calcul the distance with the coordonates from the goal
+        """
+        
+        goal_x = np.mean(self.goal[0])
+        goal_y = np.mean(self.goal[1])
+        distance = np.sqrt(np.square(goal_x - pos_x) + np.square(goal_y - pos_y))
+        norm_distance = distance / self.max_distance
+        return norm_distance
 

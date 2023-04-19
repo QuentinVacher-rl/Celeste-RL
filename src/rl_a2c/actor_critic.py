@@ -1,8 +1,6 @@
 """Multiple DQN class file
 """
 
-import random as r
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,6 +13,7 @@ class ActorCritic(nn.Module):
     def __init__(self, config_actor_critic: ConfigActorCritic, config: Config):
         super(ActorCritic, self).__init__()
 
+        self.action_mode = "Continuous"
 
         self.action_probs = None
         self.values = None
@@ -23,6 +22,9 @@ class ActorCritic(nn.Module):
 
         # Config of Multiple Qnetwork
         self.config = config_actor_critic
+
+        # Save file
+        self.save_file = self.config.file_save + "/network.pt"
 
         # Get the right model
         self.type_model = "SIMPLE_MLP" if not config.use_image else "CNN_MLP"
@@ -40,11 +42,27 @@ class ActorCritic(nn.Module):
         self.action_size = config.action_size
 
 
+        if self.type_model == "SIMPLE_MLP":
+            self.couche1 = nn.Linear(self.state_size, 128)
+            self.couche2 = nn.Linear(128, 128)
+            self.actor = nn.Linear(128, self.action_size[0])
+            self.critic = nn.Linear(128,1)
+        else:
+            # CNN Layers
+            self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
+            self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+            self.conv2 = nn.Conv2d(32, 32, kernel_size=3, padding=1)
+            self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+            self.conv3 = nn.Conv2d(32, 16, kernel_size=3, padding=1)
+            self.flatten1 = nn.Flatten()
 
-        self.couche1 = nn.Linear(self.state_size, 128)
-        self.couche2 = nn.Linear(128, 128)
-        self.actor = nn.Linear(128, self.action_size[0])
-        self.critic = nn.Linear(128,1)
+            # Classic input layer
+
+            # Fully connected layers
+            self.dense1 = nn.Linear(8160 + self.state_size, 1024)
+            self.final_dense = nn.Linear(1024, 128)
+            self.actor = nn.Linear(128, self.action_size[0])
+            self.critic = nn.Linear(128, 1)
 
         self.optimizer = torch.optim.Adam(params=list(self.parameters()), lr=self.cur_lr)
 
@@ -54,25 +72,47 @@ class ActorCritic(nn.Module):
             self.restore()
 
     def forward(self, x):
-        x = self.couche1(x)
-        x = torch.relu(x)
-        x = self.couche2(x)
-        x = torch.relu(x)
-        x_actor = self.actor(x)
-        x_critic = self.critic(x)
+        if self.type_model == "SIMPLE_MLP":
+            x = torch.tensor(x.reshape(-1), requires_grad=True, dtype=torch.float32)
+            x = self.couche1(x)
+            x = torch.relu(x)
+            x = self.couche2(x)
+            x = torch.relu(x)
+            x_actor = self.actor(x)
+            x_critic = self.critic(x)
+
+        else:
+            x_image = torch.tensor(x[0], requires_grad=True).permute(0, 3, 1, 2)
+            x_info = torch.tensor(x[1].reshape(-1), requires_grad=True, dtype=torch.float32)
+            x_image = self.conv1(x_image)
+            x_image = torch.relu(x_image)
+            x_image = self.pool1(x_image)
+            x_image = self.conv2(x_image)
+            x_image = torch.relu(x_image)
+            x_image = self.pool2(x_image)
+            x_image = self.conv3(x_image)
+            x_image = torch.relu(x_image)
+            x_image = self.flatten1(x_image).squeeze()
+
+            x = torch.cat((x_info, x_image), dim=0)
+
+            x = torch.relu(self.dense1(x))
+            x = torch.relu(self.final_dense(x))
+            x_actor = self.actor(x)
+            x_critic = self.critic(x)
+
         return x_actor, x_critic
 
 
     def choose_action(self,state, available_actions):
 
         # Formate state
-        state = torch.tensor(state.reshape(-1), requires_grad=True, dtype=torch.float32)
-
         action_logit, value = self(state)
 
         action_probs = torch.softmax(action_logit, 0)
+        #print(action_probs)
 
-        action = np.random.choice(len(action_probs), p=action_probs.detach().numpy())
+        action = torch.distributions.Categorical(action_probs).sample()
 
         return action, action_probs[action], value
 
@@ -141,7 +181,7 @@ class ActorCritic(nn.Module):
         return returns
 
     def save(self):
-        torch.save(self.state_dict(), "network/network")
+        torch.save(self.state_dict(), self.save_file)
 
     def restore(self):
-        self.load_state_dict(torch.load("network/network"))
+        self.load_state_dict(torch.load(self.save_file))

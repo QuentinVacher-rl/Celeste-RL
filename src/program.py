@@ -9,10 +9,10 @@ from config import Config
 #from config_multi_qnetworks import ConfigMultiQnetworks as Config_algo
 #from qnetwork import MultiQNetwork as Algo
 
-from config_actor_critic import ConfigActorCritic as Config_algo
-from actor_critic import ActorCritic as Algo
+import rl_sac
 
-from metrics import Metrics
+from utils.metrics import Metrics
+
 
 absl.logging.set_verbosity(absl.logging.ERROR)
 
@@ -22,66 +22,96 @@ def main():
 
     # Create the instance of the general configuration and algorithm configuration
     config = Config()
-    config_algo = Config_algo()
+    config_algo = rl_sac.ConfigAlgo()
 
     # Create the environnement
     env = CelesteEnv(config)
     env.controls_before_start()
 
     # Create the RL algorithm
-    algo = Algo(config_algo, config)
+    algo = rl_sac.Algo(config_algo, config)
 
     # Create the metrics instance
     metrics = Metrics(config)
 
+    env.set_action_mode(algo.action_mode)
 
     # For every episode
-    episode = 1
-    while episode <= config.num_episodes:
+    for learning_step in range(1, config.nb_learning_step + 1):
 
-        # Init the episode reward at 0
-        reward_ep = list()
+        # Reset nb terminated
+        metrics.nb_terminated_train = 0
 
-        # Reset the environnement
-        state, available_actions, done = env.reset()
+        for episode_train in range(1, config.nb_train_episode + 1):
 
-        # For each step
-        while env.current_step < config.max_steps and not done:
+            # Reset the environnement
+            state, image, _, done = env.reset()
 
-            # Get the actions
-            action, action_probs, value = algo.choose_action(state, available_actions)
+            ep_reward = list()
 
-            # Step the environnement
-            next_state, reward, done, available_actions, _ = env.step(action)
+            # For each step
+            while env.current_step < config.max_steps and not done:
 
-            # Insert the data in the algorithm memory
-            algo.insert_data(action_probs, value, reward)
+                # Get the actions
+                actions = algo.choose_action(state, image)
 
-            # Actualise state
-            state = next_state
+                # Step the environnement
+                next_state, next_image, reward, done, _, _ = env.step(actions)
 
-            # Add the reward to the episode reward
-            reward_ep.append(reward)
+                # Insert the data in the algorithm memory
+                algo.insert_data(state, next_state, image, next_image, actions, reward, done)
 
-        # Train the algorithm
-        algo.train(episode)
+                # Actualise state
+                state = next_state
+                image = next_image
 
-        # Insert the metrics
-        save_model, restore = metrics.insert_metrics(reward_ep, episode)
+                # Train the algorithm
+                algo.train()
+
+                ep_reward.append(reward)
+
+            metrics.print_train_step(learning_step, episode_train, reward)
+
+        for episode_test in range(1, config.nb_test_episode + 1):
+
+            # Init the episode reward at 0
+            reward_ep = list()
+
+            # Reset the environnement
+            state, image, _, done = env.reset(test=True)
+
+            # For each step
+            while env.current_step < config.max_steps and not done:
+
+                # Get the actions
+                actions = algo.choose_action(state, image)
+
+                # Step the environnement
+                next_state, next_image, reward, done, _, _ = env.step(actions)
+
+                # Actualise state
+                state = next_state
+                image = next_image
+
+                # Add the reward to the episode reward
+                reward_ep.append(reward)
+
+
+            # Insert the metrics
+            save_model, restore = metrics.insert_metrics(learning_step, reward_ep, episode_test)
+
+            # Print the information about the episode
+            metrics.print_test_step(learning_step, episode_test)
+
+            
 
         # Save the model (will be True only if new max reward)
         if save_model:
-            algo.save()
+            algo.save_model()
 
         if restore:
             print("restore")
-            algo.restore()
-
-        # Print the information about the episode
-        metrics.print_step(episode)
-
-        # Incremente the episode
-        episode += 1
+            algo.load_model()
 
 
 

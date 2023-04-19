@@ -3,7 +3,8 @@
 
 import numpy as np
 
-from screen_info import ScreenInfo
+from utils.screen_info import ScreenInfo
+import torch
 
 class Config:
     """Class for the general config
@@ -16,10 +17,12 @@ class Config:
         # -------------------------------------------
 
         # Total number of episode
-        self.learning_step = 100
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        self.nb_learning_step = 10_000
 
         # Max step per episode
-        self.max_steps = 100
+        self.max_steps = 150
 
         # Train episode per learning step
         self.nb_train_episode = 100
@@ -46,7 +49,7 @@ class Config:
         self.screen_info = [
             ScreenInfo(
                 screen_id=1,
-                start_position = [[19, 144], [90, 128], [160, 80], [260, 56]],
+                start_position = [[19, 144], [90, 128], [160, 80],  [260, 56]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=308, x_min=12,
@@ -56,7 +59,7 @@ class Config:
             ),
             ScreenInfo(
                 screen_id=2,
-                start_position = [[284, -24], [360, -50], [445, -85], [530, -80]],
+                start_position = [[264, -24], [360, -50], [445, -85], [530, -80], [530, -160]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=540, x_min=252,
@@ -76,9 +79,9 @@ class Config:
         self.reduction_factor = 8
 
         # True to indicate that size image could be wrong
-        self.allow_change_size_image = True
+        self.allow_change_size_image = False
         # Size of the screenshoted image after pooling
-        self.size_image = np.array([45, 80, 3])
+        self.size_image = np.array([3, 68, 120])
 
         # -------------------------------------------
 
@@ -89,7 +92,7 @@ class Config:
         # -------------------------------------------
 
         # Action size vector
-        self.action_size = np.array([72])
+        self.action_size = np.array([3,3,2,3,2])
         # 9 for dashes in each direction
         # 9 for right, left, up, down + diagonals
         # 2 for jump
@@ -99,20 +102,20 @@ class Config:
         self.base_observation_size = 6
 
         # True if the action are given in the observation
-        self.give_former_actions = True
+        self.give_former_actions = False
 
         # If True, the base size of observation is bigger
         if self.give_former_actions:
             self.base_observation_size = self.base_observation_size + len(self.action_size)
 
         # Quantity of former iteration state and action (if action given) put if the observation vector
-        self.histo_obs = 1
+        self.histo_obs = 0
 
         # Calculate the real size of observation
         self.observation_size = (self.histo_obs + 1) * self.base_observation_size
 
         # True if the goal coordinate are given
-        self.give_goal_coords = True
+        self.give_goal_coords = False
 
         # If True, add 4 because the coordinate are 2 X value and 2 Y value
         if self.give_goal_coords:
@@ -126,22 +129,20 @@ class Config:
             self.observation_size += 1
 
         # Reward for death
-        self.reward_death = -1
+        self.reward_death = -0.5
 
         # Reward when step reached
-        self.reward_step_reached = 1
+        self.reward_step_reached = 0
 
         # Reward chen screen passed
         self.reward_screen_passed = 100
 
         # Reward when nothing append
-        self.natural_reward = -0.1
+        self.natural_reward = -0.5
 
         # True if the image is used for learning
         self.use_image = False
 
-        # Screen start
-        self.start_screen = 2
 
         # -------------------------------------------
 
@@ -151,7 +152,7 @@ class Config:
 
         # -------------------------------------------
 
-        self.val_test = 50
+        self.val_test = 100
 
         self.color_graph = {
             "Death": "#1f77b4",
@@ -162,6 +163,6 @@ class Config:
             "Step 3": "#8c564b"
         }
 
-        self.limit_restore = 3
+        self.limit_restore = 3000
 
         # -------------------------------------------

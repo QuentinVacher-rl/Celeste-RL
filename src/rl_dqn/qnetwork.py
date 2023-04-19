@@ -20,6 +20,11 @@ class MultiQNetwork():
         # Config of Multiple Qnetwork
         self.config = config_multi_qnetwork
 
+        self.action_mode = "Discrete"
+
+        # Save file
+        self.save_file = self.config.file_save + "/network.pt"
+
         # Get the right model
         self.type_model = "SIMPLE_MLP" if not config.use_image else "CNN_MLP"
 
@@ -254,7 +259,7 @@ class MultiQNetwork():
     def restore(self):
         """Restore the networks based on saved ones
         """
-        self.q_network = tf.keras.models.load_model("network/network")
+        self.q_network = tf.keras.models.load_model(self.save_file)
         self.q_network.compile(loss='mse', optimizer= tf.optimizers.Adam(learning_rate=self.cur_lr))
         self.copy_target_network()
 
@@ -263,4 +268,4 @@ class MultiQNetwork():
     def save(self):
         """Save the networks
         """
-        self.q_network.save("network/network")
+        self.q_network.save(self.save_file)

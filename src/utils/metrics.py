@@ -27,8 +27,11 @@ class Metrics:
             "Level passed": [0]
         }
 
-        # list to store all the rewards gotten
+        # list to store all the testing rewards gotten
         self.all_reward = list()
+
+        # List to store all the training rewards gotten
+        self.train_reward = list()
 
         # Max reward gotten on each range of val test
         self.max_mean_reward = -1 * np.inf
@@ -42,16 +45,21 @@ class Metrics:
         # Counter for restore model
         self.counter_restore = 0
 
-    def insert_metrics(self, reward: list(), episode: int):
+        # Number terminated for train part
+        self.nb_terminated_train = 0
+
+    def insert_metrics(self, learning_step: int, reward: list(), episode: int):
         """Insert metrics given
 
         Args:
+            learning_step (int): step of the learning
             reward (list): list of rewards of the episode
             episode (int): current episode
 
         Returns:
             bool: True if there is a new max reward, else False
         """
+
         # Actualise the total number of steps
         self.nb_total_step += len(reward)
 
@@ -88,10 +96,10 @@ class Metrics:
 
 
         # Only print graph is the episode is multiple of value to print
-        if episode % self.config.val_test == 0:
+        if episode % self.config.nb_test_episode == 0:
 
             # Shape rewards to simplify calculs
-            reshape_rewards = np.array(self.all_reward).reshape(-1, self.config.val_test)
+            reshape_rewards = np.array(self.all_reward).reshape(-1, self.config.nb_test_episode)
 
             # If we get a new max mean reward
             if np.mean(reshape_rewards[-1]) > self.max_mean_reward:
@@ -110,7 +118,7 @@ class Metrics:
                     self.counter_restore = 0
 
             # Do not print the graphs if it is the first iteration (because graphs would be empty)
-            if episode != self.config.val_test:
+            if learning_step > 1:
 
                 # Print the graphs
                 self.print_result(reshape_rewards)
@@ -121,31 +129,57 @@ class Metrics:
 
         return new_max_reward, restore
 
-    def print_step(self, episode: int):
-        """Print the metrics infos at the current episode
+    def print_train_step(self, step, episode: int, reward):
+        """Print the metrics infos at the current learning step
 
         Args:
+            step (int): step of the learning
             episode (int): current episode
-            epsilon (float): current epsilon
+        """
+        if episode == 0:
+            self.train_reward.clear()
+
+        if reward == self.config.reward_screen_passed:
+            self.nb_terminated_train += 1
+
+        # Get time
+        time_spend = time.strftime("%H:%M:%S", time.gmtime(np.round(time.time() - self.init_time)))
+
+        # Print the graph
+        print("Time : {}, Learning step : {}/{}, episode {}/{}, nb finished {}/{}   ".format(
+            time_spend,
+            step, self.config.nb_learning_step,
+            episode, self.config.nb_train_episode,
+            self.nb_terminated_train, episode
+        ), end="\r")
+
+
+
+    def print_test_step(self, step, episode: int):
+        """Print the metrics infos at the current learning step
+
+        Args:
+            step (int): step of the learning
+            episode (int): current episode
         """
 
         # Get time
         time_spend = time.strftime("%H:%M:%S", time.gmtime(np.round(time.time() - self.init_time)))
 
-        # Get the current episode compare to the value test
-        print_reward = episode % self.config.val_test if episode % self.config.val_test != 0 else self.config.val_test
-        end = "\n" if episode % self.config.val_test == 0 else "\r"
+        end = "\n" if episode % self.config.nb_test_episode == 0 else "\r"
 
         # Print the graph
-        print("Time : {}, episode : {}, reward last {} ep {}, reward ep {}, max mean reward {}, nb step {}   ".format(
+        print("Time : {}, Learning step : {}/{}, episode {}/{}, mean reward {}, reward ep {}, max mean reward {}, nb step {}, Nb train win {}   ".format(
             time_spend,
-            episode,
-            print_reward,
-            np.round(np.mean(self.all_reward[-print_reward:]), 2),
+            step, self.config.nb_learning_step,
+            episode, self.config.nb_test_episode,
+            np.round(np.mean(self.all_reward[-episode:]), 2),
             np.round(self.all_reward[-1], 2),
             np.round(self.max_mean_reward, 2),
-            self.nb_total_step
+            self.nb_total_step,
+            self.nb_terminated_train
         ), end=end)
+
 
     def print_result(self, rewards: np.ndarray):
         """Generate a graph with the results
@@ -180,7 +214,7 @@ class Metrics:
 
         # Tracer les courbe pour le deuxième graphique
         for key, value in self.info_level.items():
-            percentage_value = np.array(value) * 100 / self.config.val_test
+            percentage_value = np.array(value) * 100 / self.config.nb_test_episode
             axs[1].plot(percentage_value, label=key, color=self.config.color_graph[key])
 
         # Ajouter les titres et labels d'axes pour le deuxième graphique

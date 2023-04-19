@@ -17,10 +17,12 @@ class ConfigActorCritic:
         self.discount_factor = 0.95
 
         # Standardize the return reward
-        self.standardize = False
+        self.standardize = True
 
         # Learning rate configuration
-        self.init_lr = 0.01
+        self.init_lr = 0.007
         self.nb_episode_lr_decay = 3000
         self.lr_decay = 0.5
         self.min_lr = 0.001
+
+        self.file_save = "src/rl_a2c/network"

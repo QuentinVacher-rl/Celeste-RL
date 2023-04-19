@@ -31,7 +31,6 @@ class ConfigMultiQnetworks:
         # Gamma value
         self.discount_factor = 0.95
 
-
         # Epsilon configuration
         self.init_epsilon = 0.6
         self.epsilon_decay = 0.999
@@ -42,3 +41,5 @@ class ConfigMultiQnetworks:
         self.nb_episode_lr_decay = 3000
         self.lr_decay = 0.5
         self.min_lr = 0.001
+
+        self.file_save = "src/rl_dqn/network"

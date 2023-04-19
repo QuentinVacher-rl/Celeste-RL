@@ -55,11 +55,19 @@ class CelesteEnv():
         # Index of step reached
         self.step_reached = 0
 
+        # True if maddeline is dashing in the current step
+        self.is_dashing = False
+
+        self.action_mode = "Continuous"
+
         # Object initiate for screen shot
         if config.use_image:
             self.camera = dxcam.create()
 
-    def step(self, action):
+    def set_action_mode(self, action_mode):
+        self.action_mode = action_mode
+
+    def step(self, actions):
         """Step method
 
         Args:
@@ -71,47 +79,51 @@ class CelesteEnv():
         # Incremente the step
         self.current_step += 1
 
+
+        # Action 0
+        if self.action_mode == "Continuous":
+            actions = np.trunc((actions.reshape(-1) + 1) * self.action_size / 2)
+
+
         # Init the frame with the quantity of frames/step
-        frame_to_add = f"   {self.config.nb_frame_action}"
-
-
-        actions = np.zeros(4, dtype=np.int32)
-        actions[0] = action % 9
-        actions[1] = np.trunc(action / 9) % 2
-        actions[2] = np.trunc(action / 18) % 2
-        actions[3] = np.trunc(action / 36) % 2
+        frame_to_add_l1 = "   1"
+        frame_to_add_l2 = f"   {self.config.nb_frame_action-1}"
 
         # Add the corresponding actions (See CelesteTAS documentation for explanation)
-        if actions[0] == 1 or actions[0] == 2 or actions[0] == 8:
-            frame_to_add += ",R"
-        if actions[0] == 4 or actions[0] == 5 or actions[0] == 6:
-            frame_to_add += ",L"
-        if actions[0] == 2 or actions[0] == 3 or actions[0] == 4:
-            frame_to_add += ",U"
-        if actions[0] == 6 or actions[0] == 7 or actions[0] == 8:
-            frame_to_add += ",D"
+        if actions[0] == 2:
+            frame_to_add_l1 += ",R"
+            frame_to_add_l2 += ",R"
+        if actions[0] == 0:
+            frame_to_add_l1 += ",L"
+            frame_to_add_l2 += ",L"
+        if actions[1] == 2:
+            frame_to_add_l1 += ",U"
+            frame_to_add_l2 += ",U"
+        if actions[1] == 0:
+            frame_to_add_l1 += ",D"
+            frame_to_add_l2 += ",D"
 
-        if actions[1] != 0:
-            frame_to_add += ",X"
-
-        if len(self.action_size.shape) > 1 and self.action_size[0] == 0:
-            if actions[1] == 1 or actions[1] == 2 or actions[1] == 8:
-                frame_to_add += ",R"
-            if actions[1] == 4 or actions[1] == 5 or actions[1] == 6:
-                frame_to_add += ",L"
-            if actions[1] == 2 or actions[1] == 3 or actions[1] == 4:
-                frame_to_add += ",U"
-            if actions[1] == 6 or actions[1] == 7 or actions[1] == 8:
-                frame_to_add += ",D"
-
-        if actions[2] == 1:
-            frame_to_add += ",J"
+        if actions[2] != 0:
+            frame_to_add_l1 += ",X"
+            frame_to_add_l2 += ",X"
+            self.is_dashing = True
+        else:
+            self.is_dashing = False
 
         if actions[3] == 1:
-            frame_to_add += ",G"
+            frame_to_add_l1 += ",J"
+        
+        if actions[3] == 2:
+            frame_to_add_l1 += ",J"
+            frame_to_add_l2 += ",J"
+
+        if actions[4] == 1:
+            frame_to_add_l1 += ",G"
+            frame_to_add_l2 += ",G"
 
         # Add the frame to the current tas file
-        self.current_tas_file += frame_to_add + "\n"
+        self.current_tas_file += frame_to_add_l1 + "\n" + frame_to_add_l2 + "\n" 
+
 
         # Sometimes there is a Exception PermissionError access to the file
         # The while / Try / Except is to avoid the code crashing because of this
@@ -120,7 +132,7 @@ class CelesteEnv():
             try:
                 # Rewrite the tas file with the frame
                 with open("file.tas", "w+", encoding="utf-8") as file:
-                    file.write(frame_to_add + "\n\n# end\n   1")
+                    file.write(frame_to_add_l1 + "\n" + frame_to_add_l2 + "\n\n# end\n   1")
                 changes_make = True
             except PermissionError:
                 # If error, wait 1 second
@@ -143,22 +155,20 @@ class CelesteEnv():
         if self.config.give_former_actions:
 
             # Add them to the observation vector
-            observation[self.config.base_observation_size - len(self.action_size):] = action / self.action_size
+            observation[self.config.base_observation_size - len(self.action_size):] = actions / self.action_size
 
         # Now add the current observation
         self.observation[self.index_start_obs:self.config.base_observation_size+self.index_start_obs] = observation
 
         # Create the observation vector
-        obs_vect = self.observation[np.newaxis, ...]
+        obs_vect = np.array(self.observation[np.newaxis, ...])
 
         # If the image of the game is used
+        screen_obs = None
         if self.config.use_image:
 
             # Get the array of the screen
             screen_obs = self.get_image_game()
-
-            # Create the observation vector with the screen in
-            obs_vect = [screen_obs, self.observation[np.newaxis, ...]]
 
 
         # Available actions avec 1 on every possible actions, 0 on every impossible ones
@@ -174,10 +184,13 @@ class CelesteEnv():
         # No info passed but initiate for convention
         info = {}
 
-        return obs_vect, reward, done, available_actions, info
+        return obs_vect, screen_obs, reward, done, available_actions, info
 
-    def reset(self):
+    def reset(self, test=False):
         """Reset the environnement
+
+        Args:
+            test (bool): True if this is a test
 
         Returns:
             tuple: New state, reward
@@ -187,7 +200,10 @@ class CelesteEnv():
         self.screen_info = self.config.screen_info[np.random.choice(self.config.screen_used)]
 
         # Init the current tas file
-        self.current_tas_file = self.screen_info.get_random_start()
+        if not test:
+            self.current_tas_file = self.screen_info.get_random_start()
+        else:
+            self.current_tas_file = self.screen_info.get_true_start()
 
         # Init the current step
         self.current_step = 0
@@ -206,13 +222,13 @@ class CelesteEnv():
             file.write(self.current_tas_file)
 
         # Run it
-        requests.get("http://localhost:32270/tas/playtas?filePath={}".format(self.config.path_tas_file), timeout=5)
+        requests.get("http://localhost:32270/tas/playtas?filePath={}".format(self.config.path_tas_file), timeout=0.5)
 
         # Wait a bit, again..
-        time.sleep(self.config.sleep*3)
+        time.sleep(self.config.sleep)
 
         # Fast Forward
-        requests.get("http://localhost:32270/tas/sendhotkey?id=FastForwardComment", timeout=5)
+        requests.get("http://localhost:32270/tas/sendhotkey?id=FastForwardComment", timeout=0.5)
 
         # Init the game step
         # With the init tas file given, Madeline take it first action at the 6st frame
@@ -237,7 +253,7 @@ class CelesteEnv():
 
             # Normally Timer appear on -8 index, but sometimes there is a "Cursor" info that can crash the code
             # If "Timer" is not on -8 index, we just check all the index
-            if "Timer" in l_text[-8]:
+            if len(l_text) > 8 and "Timer" in l_text[-8]:
                 # Get game step
                 self.game_step = int(l_text[-8].replace(")","").split("(")[1])
             else:
@@ -250,7 +266,7 @@ class CelesteEnv():
         self.game_step = 0
 
         # Get the observation of Madeline, no use for Done because it can not be True at reset
-        observation, _ = self.get_madeline_info()
+        observation, _ = self.get_madeline_info(reset=True)
 
         # If the goal coords are given, put it in the observation vector
         if self.config.give_goal_coords:
@@ -263,28 +279,26 @@ class CelesteEnv():
             self.observation[2:4] = self.screen_info.normalize_x(reward_goal_y)
 
         # Insert the observation
-        for index in range(self.config.histo_obs):
+        for index in range(self.config.histo_obs+1):
             index_start = self.index_start_obs + self.config.base_observation_size * index
             index_end = self.index_start_obs + self.config.base_observation_size * (index + 1)
             self.observation[index_start:index_end] = observation
 
         # Create the observation vector
-        obs_vect = self.observation[np.newaxis, ...]
+        obs_vect = np.array(self.observation[np.newaxis, ...])
 
         # If the image of the game is used
+        screen_obs = None
         if self.config.use_image:
 
             # Get the array of the screen
             screen_obs = self.get_image_game()
 
-            # Create the observation vector with the screen in
-            obs_vect = [screen_obs, self.observation[np.newaxis, ...]]
-
         # Available actions avec 1 on every possible actions, 0 on every impossible ones
         available_actions = [np.ones(current_action) for current_action in self.action_size]
 
 
-        return obs_vect, available_actions, False
+        return obs_vect, screen_obs, available_actions, False
 
     def render(self):
         """Render method
@@ -292,11 +306,12 @@ class CelesteEnv():
         # Do not know if I will need it anytime
 
 
-    def get_image_game(self, normalize:bool=True):
+    def get_image_game(self, normalize:bool=True, transpose:bool=True):
         """Get a np array of the current screen
 
         Args:
             normalize (bool): True to normalize array, default=1
+            transpose (bool): True to transpose array, default=1
 
         Returns:
             np.array: array of the current screen
@@ -322,6 +337,11 @@ class CelesteEnv():
 
         frame = tf.nn.max_pool(frame, ksize=pooling_size, strides=pooling_size, padding='SAME').numpy()
 
+
+        if transpose:
+            frame = tf.transpose(frame, perm=[0, 3, 1 ,2]).numpy()
+
+
         # Normalize the screen
         if normalize:
             frame = frame / 255
@@ -329,7 +349,7 @@ class CelesteEnv():
         return frame
 
 
-    def get_madeline_info(self):
+    def get_madeline_info(self, reset=False):
         """Get the observation of madeline
 
         Args:
@@ -344,24 +364,20 @@ class CelesteEnv():
         # Save the former game step
         former_game_step = self.game_step
 
+        step_searched = former_game_step + self.config.nb_frame_action
+
+        step_searched_dash = step_searched - self.is_dashing * 3
+
+        can_reset = False
+
         # Save first try, wait only if first try is wrong
-        nb_try = 0
+        nb_try = 1
 
         # While the times are the same
-        while former_game_step == self.game_step:
+        while self.game_step != step_searched and self.game_step != step_searched_dash and nb_try < 11:
 
-            # Wait a bit if not first try
-            if nb_try > 0:
-                time.sleep(self.config.sleep)
-
-            # If the number of try exceed 10, the tas file was not apply, run it again
-            if nb_try > 10:
-                # Run the tas file
-                requests.get("http://localhost:32270/tas/playtas?filePath={}".format(self.config.path_tas_file), timeout=5)
-
-                # Fast Forward to the end of the action to save execution time
-                requests.get("http://localhost:32270/tas/sendhotkey?id=FastForwardComment", timeout=5)
-
+            # Wait a bit
+            time.sleep(self.config.sleep)
 
             nb_try += 1
 
@@ -373,15 +389,18 @@ class CelesteEnv():
 
             # Normally Timer appear on -8 index, but sometimes there is a "Cursor" info that can crash the code
             # If "Timer" is not on -8 index, we just check all the index
-            if "Timer" in l_text[-8]:
+            if len(l_text) > 8 and "Timer" in l_text[-8]:
                 # Get game step
                 self.game_step = int(l_text[-8].replace(")","").split("(")[1])
+                can_reset = reset
             else:
                 for line in l_text:
                     if "Timer" in line:
                         # Get game step
                         self.game_step = int(line.replace(")","").split("(")[1])
 
+            if can_reset:
+                break
 
         # Get the observation information, not gonna detail those part because it is just the string interpretation
         # Run "http://localhost:32270/tas/info" on a navigator to understand the information gotten
@@ -449,12 +468,8 @@ class CelesteEnv():
         if self.screen_passed:
             return self.config.reward_screen_passed
 
-        # If step reached, reward is index of step multiply by the reward for step reached
-        if self.step_reached > 0 and False:
-            return self.step_reached * self.config.reward_step_reached
-
         # Else reward is natural reward
-        return self.config.natural_reward
+        return self.config.natural_reward# * np.square(self.screen_info.distance_goal(self.pos_x, self.pos_y))
 
     def controls_before_start(self):
         """Controls before the start of the test: 
@@ -467,7 +482,7 @@ class CelesteEnv():
 
         # Save the image
         if self.config.use_image:
-            screen = self.get_image_game(normalize=False)[0]
+            screen = self.get_image_game(normalize=False, transpose=False)[0]
             imwrite('screen.png', screen)
 
             # If the image shape is not the same as the one in config
