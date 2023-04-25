@@ -29,9 +29,14 @@ class CelesteEnv():
 
         # Observation vector
         self.observation = np.zeros(self.observation_size)
+        self.screen_obs = np.zeros(((self.config.histo_obs+1)*self.config.size_image[0], self.config.size_image[1], self.config.size_image[2]))
 
         # Index to start the information of position, speed and stamina (decay of 4 if the goal coords are given)
-        self.index_start_obs = 4 if config.give_goal_coords else 0
+        self.index_start_obs = 0
+        if config.give_goal_coords:
+            self.index_start_obs += 4
+        if config.give_screen_value:
+            self.index_start_obs += 1
 
         # Tas file (line) send to Celeste
         self.current_tas_file = ""
@@ -112,7 +117,7 @@ class CelesteEnv():
 
         if actions[3] == 1:
             frame_to_add_l1 += ",J"
-        
+
         if actions[3] == 2:
             frame_to_add_l1 += ",J"
             frame_to_add_l2 += ",J"
@@ -146,7 +151,7 @@ class CelesteEnv():
 
 
         # Get observation and done info
-        observation, done= self.get_madeline_info()
+        observation, done, fail_see_death= self.get_madeline_info()
 
         # Roll the observation array (because we want to save an historic of the former actions and observations)
         self.observation[self.index_start_obs:] = np.roll(self.observation[self.index_start_obs:], self.config.base_observation_size, axis=0)
@@ -170,19 +175,23 @@ class CelesteEnv():
             # Get the array of the screen
             screen_obs = self.get_image_game()
 
+            self.screen_obs = np.roll(self.screen_obs, 3, axis=0)
+            self.screen_obs[0:3] = screen_obs
+
+            screen_obs = np.array(self.screen_obs[np.newaxis, ...])
+
+        if self.current_step == self.config.max_steps:
+            done = True
+
 
         # Available actions avec 1 on every possible actions, 0 on every impossible ones
         available_actions = [np.ones(current_action) for current_action in self.action_size]
-
-        # if the dash is not available
-        if observation[5] == 0 and False:
-            available_actions[1][1:] = 0
 
         # Get the reward
         reward = self.get_reward()
 
         # No info passed but initiate for convention
-        info = {}
+        info = {"fail_death": fail_see_death}
 
         return obs_vect, screen_obs, reward, done, available_actions, info
 
@@ -266,7 +275,7 @@ class CelesteEnv():
         self.game_step = 0
 
         # Get the observation of Madeline, no use for Done because it can not be True at reset
-        observation, _ = self.get_madeline_info(reset=True)
+        observation, _, _ = self.get_madeline_info(reset=True)
 
         # If the goal coords are given, put it in the observation vector
         if self.config.give_goal_coords:
@@ -277,6 +286,11 @@ class CelesteEnv():
             # Make sure to normalize the values
             self.observation[0:2] = self.screen_info.normalize_x(reward_goal_x)
             self.observation[2:4] = self.screen_info.normalize_x(reward_goal_y)
+
+        if self.config.give_screen_value:
+            screen_value = self.screen_info.screen_id
+            index = self.index_start_obs - 1
+            self.observation[index] = screen_value - 1
 
         # Insert the observation
         for index in range(self.config.histo_obs+1):
@@ -294,6 +308,13 @@ class CelesteEnv():
             # Get the array of the screen
             screen_obs = self.get_image_game()
 
+            # Duplicate to match historic size
+            for index in range(self.config.histo_obs+1):
+                self.screen_obs[index*3:(index+1)*3] = screen_obs
+
+            screen_obs = np.array(self.screen_obs[np.newaxis, ...])
+
+
         # Available actions avec 1 on every possible actions, 0 on every impossible ones
         available_actions = [np.ones(current_action) for current_action in self.action_size]
 
@@ -306,12 +327,11 @@ class CelesteEnv():
         # Do not know if I will need it anytime
 
 
-    def get_image_game(self, normalize:bool=True, transpose:bool=True):
+    def get_image_game(self, normalize:bool=True):
         """Get a np array of the current screen
 
         Args:
             normalize (bool): True to normalize array, default=1
-            transpose (bool): True to transpose array, default=1
 
         Returns:
             np.array: array of the current screen
@@ -335,12 +355,8 @@ class CelesteEnv():
         # Definition of pooling size to reduce the size of the image
         pooling_size = self.config.reduction_factor
 
-        frame = tf.nn.max_pool(frame, ksize=pooling_size, strides=pooling_size, padding='SAME').numpy()
-
-
-        if transpose:
-            frame = tf.transpose(frame, perm=[0, 3, 1 ,2]).numpy()
-
+        frame = tf.nn.max_pool(frame, ksize=pooling_size, strides=pooling_size, padding='SAME')
+        frame = tf.transpose(frame, perm=[0, 3, 1 ,2]).numpy()
 
         # Normalize the screen
         if normalize:
@@ -392,15 +408,15 @@ class CelesteEnv():
             if len(l_text) > 8 and "Timer" in l_text[-8]:
                 # Get game step
                 self.game_step = int(l_text[-8].replace(")","").split("(")[1])
-                can_reset = reset
             else:
                 for line in l_text:
                     if "Timer" in line:
                         # Get game step
                         self.game_step = int(line.replace(")","").split("(")[1])
 
-            if can_reset:
-                break
+        if self.game_step == 0:
+            fail_see_death = True
+            return None, None, fail_see_death
 
         # Get the observation information, not gonna detail those part because it is just the string interpretation
         # Run "http://localhost:32270/tas/info" on a navigator to understand the information gotten
@@ -452,7 +468,7 @@ class CelesteEnv():
             self.screen_passed = True
             done = True
 
-        return observation, done
+        return observation, done, None
 
     def get_reward(self):
         """Get the reward
@@ -469,7 +485,7 @@ class CelesteEnv():
             return self.config.reward_screen_passed
 
         # Else reward is natural reward
-        return self.config.natural_reward# * np.square(self.screen_info.distance_goal(self.pos_x, self.pos_y))
+        return self.config.natural_reward * np.square(0.6 - self.screen_info.distance_goal(self.pos_x, self.pos_y))
 
     def controls_before_start(self):
         """Controls before the start of the test: 
@@ -482,8 +498,8 @@ class CelesteEnv():
 
         # Save the image
         if self.config.use_image:
-            screen = self.get_image_game(normalize=False, transpose=False)[0]
-            imwrite('screen.png', screen)
+            screen = self.get_image_game(normalize=False)[0]
+            imwrite('screen.png', np.rollaxis(screen, 0, 3))
 
             # If the image shape is not the same as the one in config
             if screen.shape[0] != self.config.size_image[0] or screen.shape[1] != self.config.size_image[1]:
@@ -491,6 +507,7 @@ class CelesteEnv():
                 # Change i if allowed
                 if self.config.allow_change_size_image:
                     self.config.size_image = np.array(screen.shape)
+                    self.screen_obs = np.zeros(((self.config.histo_obs+1)*self.config.size_image[0], self.config.size_image[1], self.config.size_image[2]))
 
                 # Else raise error
                 else:

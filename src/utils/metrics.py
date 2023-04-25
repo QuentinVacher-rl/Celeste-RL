@@ -102,7 +102,7 @@ class Metrics:
             reshape_rewards = np.array(self.all_reward).reshape(-1, self.config.nb_test_episode)
 
             # If we get a new max mean reward
-            if np.mean(reshape_rewards[-1]) > self.max_mean_reward:
+            if np.mean(reshape_rewards[-1]) >= self.max_mean_reward:
 
                 # Save the new max
                 self.max_mean_reward = np.mean(reshape_rewards[-1])
