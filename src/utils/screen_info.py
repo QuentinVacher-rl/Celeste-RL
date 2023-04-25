@@ -10,7 +10,7 @@ class ScreenInfo:
 
     def __init__(self, screen_id: int, start_position: list, first_frame: int, tas_file: str,
                  x_max: float, x_min: float, y_max :float, y_min: float,
-                 list_step_reward: list, goal: list):
+                 goal: list, next_screen_id: int):
 
         # Id of the screen
         self.screen_id = screen_id
@@ -29,14 +29,14 @@ class ScreenInfo:
 
         self.max_distance = np.sqrt(np.square(self.x_max - self.x_min) + np.square(self.x_max - self.x_min))
 
-        # Step reward to reached
-        self.list_step_reward = list_step_reward
-
         # Position where madeline can start
         self.start_position = start_position
 
         # Goal to reached
         self.goal = goal
+
+        # Id of the next screen (for if multiple possible next screen)
+        self.next_screen_id = next_screen_id
 
     def normalize_x(self, value: float):
         """Normalize the value on x

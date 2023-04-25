@@ -20,9 +20,6 @@ class Metrics:
         # Array of shape 3 to indicate the time Madeline pass the level, died, or juste finished with max iteration
         self.info_level = {
             "Unfinished": [0],
-            "Step 1": [0],
-            "Step 2": [0],
-            "Step 3": [0],
             "Death": [0],
             "Level passed": [0]
         }
@@ -81,11 +78,6 @@ class Metrics:
         else:
             self.info_level["Unfinished"][-1] += 1
 
-        # Check for step reached
-        for index in range(3):
-            # Check is the index is in the reward list
-            if (index + 1) * self.config.reward_step_reached in reward:
-                self.info_level[f"Step {index + 1}"][-1] += 1
 
 
 

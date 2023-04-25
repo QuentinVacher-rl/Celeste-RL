@@ -73,6 +73,7 @@ def main():
 
                     ep_reward.append(reward)
                 else:
+                    print("fail")
                     algo.memory.change_done_last_index()
                     done=True
 

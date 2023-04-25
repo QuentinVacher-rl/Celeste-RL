@@ -54,11 +54,13 @@ class CelesteEnv():
         # True if Madeline is dead
         self.dead = False
 
-        # True if the screen is paster
+        # True if the screen is pasted
         self.screen_passed = False
 
-        # Index of step reached
-        self.step_reached = 0
+        # True if the wrong screen is pasted
+        self.wrong_screen_passed = False
+
+
 
         # True if maddeline is dashing in the current step
         self.is_dashing = False
@@ -220,8 +222,11 @@ class CelesteEnv():
         # True if Madeline is dead
         self.dead = False
 
-        # True if the screen is paster
+        # True if the screen is pasted
         self.screen_passed = False
+
+        # True if the wrong screen is pasted
+        self.wrong_screen_passed = False
 
         # Wait a bit to avoid problems
         time.sleep(self.config.sleep*3)
@@ -384,8 +389,6 @@ class CelesteEnv():
 
         step_searched_dash = step_searched - self.is_dashing * 3
 
-        can_reset = False
-
         # Save first try, wait only if first try is wrong
         nb_try = 1
 
@@ -401,7 +404,8 @@ class CelesteEnv():
             response = requests.get("http://localhost:32270/tas/info", timeout=5)
 
             # Get the corresponding text
-            l_text = BeautifulSoup(response.content, "html.parser").text.split("\n")
+            text_row = BeautifulSoup(response.content, "html.parser").text
+            l_text = text_row.split("\n")
 
             # Normally Timer appear on -8 index, but sometimes there is a "Cursor" info that can crash the code
             # If "Timer" is not on -8 index, we just check all the index
@@ -445,27 +449,20 @@ class CelesteEnv():
         # Init done at False
         done = False
 
-        # Reset mid step reached at False
-        self.step_reached = 0
-
-        # If reward step is reached
-        for index, step in enumerate(self.screen_info.list_step_reward):
-            if (
-                    self.pos_x >= step[0][0]
-                    and self.pos_x <= step[0][1]
-                    and self.pos_y >= step[1][0]
-                    and self.pos_y <= step[1][1]
-            ):
-                self.step_reached = index + 1
 
         # If dead
-        if "Dead" in "".join(l_text[-10:-8]):
+        if "Dead" in text_row:
             done = True
             self.dead = True
 
         # If screen pasted. Only on screen 1 for now, will be change later
-        if f"[{self.screen_info.screen_id + 1}]" in l_text[-8]:
+        if f"[{self.screen_info.next_screen_id}]" in l_text[-8]:
             self.screen_passed = True
+            done = True
+
+        # Else if the current screen id is not in text, then the wrong screen as been pasted
+        elif f"[{self.screen_info.screen_id}]" not in l_text[-8]:
+            self.wrong_screen_passed = True
             done = True
 
         return observation, done, None
@@ -483,6 +480,9 @@ class CelesteEnv():
         # If screen passed
         if self.screen_passed:
             return self.config.reward_screen_passed
+        
+        if self.wrong_screen_passed:
+            return self.config.reward_wrong_screen_passed
 
         # Else reward is natural reward
         return self.config.natural_reward * np.square(0.6 - self.screen_info.distance_goal(self.pos_x, self.pos_y))
