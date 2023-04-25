@@ -18,6 +18,7 @@ class SoftActorCritic():
         self.action_mode = "Continuous"
 
         self.config = config_sac
+        self.size_histo = config_env.histo_obs
         self.action_size = config_env.action_size.shape[0]
         self.state_size = config_env.observation_size
 
@@ -29,12 +30,12 @@ class SoftActorCritic():
         self.batch_size = self.config.batch_size
         self.epoch = self.config.epoch
 
-        self.memory = ReplayBuffer(size=self.config.size_buffer, action_size=self.action_size, state_size=self.state_size, image_size=self.size_image)
-        self.actor = ActorNetwork(self.state_size, self.action_size, self.size_image, self.config)
-        self.critic_1 = CriticNetwork(self.state_size, self.action_size, self.size_image, self.config, name="critic_1")
-        self.critic_2 = CriticNetwork(self.state_size, self.action_size, self.size_image, self.config, name="critic_2")
-        self.value = ValueNetwork(self.state_size, self.size_image, self.config, name="value")
-        self.target_value = ValueNetwork(self.state_size, self.size_image, self.config, name="value_target")
+        self.memory = ReplayBuffer(size=self.config.size_buffer, action_size=self.action_size, state_size=self.state_size, image_size=self.size_image, size_histo=self.size_histo)
+        self.actor = ActorNetwork(self.state_size, self.action_size, self.size_image, self.size_histo, self.config)
+        self.critic_1 = CriticNetwork(self.state_size, self.action_size, self.size_image, self.size_histo, self.config, name="critic_1")
+        self.critic_2 = CriticNetwork(self.state_size, self.action_size, self.size_image, self.size_histo, self.config, name="critic_2")
+        self.value = ValueNetwork(self.state_size, self.size_image, self.size_histo, self.config, name="value")
+        self.target_value = ValueNetwork(self.state_size, self.size_image, self.size_histo, self.config, name="value_target")
 
         self.alpha = self.config.alpha
         self.update_target_network(init=True)
@@ -54,7 +55,7 @@ class SoftActorCritic():
             param_value[key] = tau*param_value[key].clone() + (1-tau)*param_target[key].clone()
 
         self.target_value.load_state_dict(param_value)
-    
+
     def insert_data(self, state, new_state, image, new_image, actions_probs, reward, done):
         self.memory.insert_data(state, new_state, image, new_image, actions_probs, reward, done)
 
