@@ -425,45 +425,57 @@ class CelesteEnv():
         # Get the observation information, not gonna detail those part because it is just the string interpretation
         # Run "http://localhost:32270/tas/info" on a navigator to understand the information gotten
 
-        # Position is on index 11
-        pos = l_text[11].split(' ')[-2:]
-        self.pos_x = float(pos[0].replace(",",""))
-        self.pos_y = float(pos[1].replace("\r", ""))
-
-        # Normalise the information
-        observation[0] = self.screen_info.normalize_x(self.pos_x)
-        observation[1] = self.screen_info.normalize_x(self.pos_y)
-
-        # Only speed is get for now, maybe velocity will be usefull later
-        speed = l_text[12].split()
-        observation[2] = float(speed[1].replace(",", ""))/10
-        observation[3] = float(speed[2])/10
-
-        # Stamine
-        observation[4] = float(l_text[14].split()[1])/110
-
-        # Disponibility of dash
-        dispo_dash = ("CanDash" in l_text[15] or "CanDash" in l_text[16])
-        observation[5] = 1 if dispo_dash else 0
-
+        # Init dash at False
+        dispo_dash = False
         # Init done at False
         done = False
 
+        for line in l_text:
 
-        # If dead
-        if "Dead" in text_row:
-            done = True
-            self.dead = True
+            if "Pos" in line:
+                # get position
+                pos = line.split(' ')[-2:]
+                self.pos_x = float(pos[0].replace(",",""))
+                self.pos_y = float(pos[1].replace("\r", ""))
 
-        # If screen pasted. Only on screen 1 for now, will be change later
-        if f"[{self.screen_info.next_screen_id}]" in l_text[-8]:
-            self.screen_passed = True
-            done = True
+                # Normalise the information
+                observation[0] = self.screen_info.normalize_x(self.pos_x)
+                observation[1] = self.screen_info.normalize_x(self.pos_y)
 
-        # Else if the current screen id is not in text, then the wrong screen as been pasted
-        elif f"[{self.screen_info.screen_id}]" not in l_text[-8]:
-            self.wrong_screen_passed = True
-            done = True
+            if "Speed" in line:
+                # Only speed is get for now, maybe velocity will be usefull later
+                speed = line.split()
+                observation[2] = float(speed[1].replace(",", ""))/10
+                observation[3] = float(speed[2])/10
+
+            if "Stamina" in line:
+                # Stamina
+                observation[4] = float(l_text[14].split()[1])/110
+
+            if "CanDash" in line:
+                dispo_dash = True
+
+
+            # If dead
+            if "Dead" in line:
+                done = True
+                self.dead = True
+
+            if "Timer" in line:
+                # If screen pasted. Only on screen 1 for now, will be change later
+                if f"[{self.screen_info.next_screen_id}]" in line:
+                    self.screen_passed = True
+                    done = True
+
+                # Else if the current screen id is not in text, then the wrong screen as been pasted
+                elif f"[{self.screen_info.screen_id}]" not in line:
+                    self.wrong_screen_passed = True
+                    done = True
+
+
+        # Disponibility of dash
+        observation[5] = 1 if dispo_dash else 0
+
 
         return observation, done, None
 
