@@ -22,13 +22,13 @@ class Config:
         self.nb_learning_step = 10_000
 
         # Max step per episode
-        self.max_steps = 1_000
+        self.max_steps = 150
 
         # Train episode per learning step
-        self.nb_train_episode = 100
+        self.nb_train_episode = 200
 
         # Test episode per learning step
-        self.nb_test_episode = 10
+        self.nb_test_episode = 20
 
         # -------------------------------------------
 
@@ -42,7 +42,7 @@ class Config:
         self.nb_frame_action = 5
 
         self.max_id_screen = 5
-        self.screen_used = [4]
+        self.screen_used = [0,1,2,3,4]
 
         # Tas file to run for init the first screen
         self.init_tas_file = "console load 1 {}\n   38\n\n# end\n   1"
@@ -95,12 +95,12 @@ class Config:
             ScreenInfo(
                 screen_id="3b",
                 screen_value=5,
-                start_position = [[928, -568], [1110, -584], [1120, -672], [1035, -688]],
+                start_position = [[928, -568], [1059, -568], [1110, -584], [1120, -672], [1035, -688]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=1180, x_min=880,
                 y_max=-540, y_min=-735,
-                goal=[[ 908, 932], [-735, -735]],
+                goal=[[ 1075, 1052], [-735, -735]],
                 next_screen_id = "5"
             )
         ]
@@ -135,7 +135,16 @@ class Config:
         # 2 for hold/climb
 
         # Base size of observation
-        self.base_observation_size = 6
+        self.base_observation_size = 11
+        # Pos x2 : 0,1
+        # Speed x2 : 2,3
+        # Stamina : 4
+        # Wall-L/R nothing : 5
+        # StNormal/StClimb/StDash : 6
+        # CanDash : 7
+        # Coyote : 8
+        # Jump : 9
+        # DashCD : 10
 
         # True if the action are given in the observation
         self.give_former_actions = False

@@ -425,8 +425,6 @@ class CelesteEnv():
         # Get the observation information, not gonna detail those part because it is just the string interpretation
         # Run "http://localhost:32270/tas/info" on a navigator to understand the information gotten
 
-        # Init dash at False
-        dispo_dash = False
         # Init done at False
         done = False
 
@@ -440,20 +438,51 @@ class CelesteEnv():
 
                 # Normalise the information
                 observation[0] = self.screen_info.normalize_x(self.pos_x)
-                observation[1] = self.screen_info.normalize_x(self.pos_y)
+                observation[1] = self.screen_info.normalize_y(self.pos_y)
 
             if "Speed" in line:
                 # Only speed is get for now, maybe velocity will be usefull later
                 speed = line.split()
-                observation[2] = float(speed[1].replace(",", ""))/10
-                observation[3] = float(speed[2])/10
+                observation[2] = float(speed[1].replace(",", ""))/6
+                observation[3] = float(speed[2])/6
 
             if "Stamina" in line:
                 # Stamina
                 observation[4] = float(line.split()[1])/110
 
+            # By default, 0
+            if "Wall-L" in line:
+                observation[5] = 0.5
+            elif "Wall-R" in line:
+                observation[5] = 1
+
+            if "StNormal" in line:
+                observation[6] = 0
+            elif "StDash" in line:
+                observation[6] = 0.5
+            elif "StClimb" in line:
+                observation[6] = 1
+
+            # By default 0
             if "CanDash" in line:
-                dispo_dash = True
+                observation[7] = 1
+
+            if "Coyote" in line:
+                observation[8] = int(line.split("Coyote")[1][1]) / 5 # 5 is max value of coyotte
+
+            if "Jump" in line: # If more than 10
+                if line.split("Jump")[1][2].isnumeric():
+                    value = int(line.split("Jump")[1][1:3])
+                else:
+                    value = int(line.split("Jump")[1][1])
+                observation[9] = value / 14 # 14 is max value of jump
+
+            if "DashCD" in line:
+                if line.split("DashCD")[1][2].isnumeric():
+                    value = int(line.split("DashCD")[1][1:3])
+                else:
+                    value = int(line.split("DashCD")[1][1])
+                observation[10] = value / 11 # 14 is max value of jump
 
             # If dead
             if "Dead" in line:
@@ -470,10 +499,6 @@ class CelesteEnv():
                 elif f"[{self.screen_info.screen_id}]" not in line:
                     self.wrong_screen_passed = True
                     done = True
-
-
-        # Disponibility of dash
-        observation[5] = 1 if dispo_dash else 0
 
 
         return observation, done, None
