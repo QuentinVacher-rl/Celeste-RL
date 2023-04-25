@@ -8,12 +8,15 @@ class ScreenInfo:
     """Class of screen info
     """
 
-    def __init__(self, screen_id: int, start_position: list, first_frame: int, tas_file: str,
+    def __init__(self, screen_id: str, screen_value: int, start_position: list, first_frame: int, tas_file: str,
                  x_max: float, x_min: float, y_max :float, y_min: float,
-                 goal: list, next_screen_id: int):
+                 goal: list, next_screen_id: str):
 
         # Id of the screen
         self.screen_id = screen_id
+
+        # Value of the screen
+        self.screen_value = screen_value
 
         # First frame to start
         self.first_frame = first_frame

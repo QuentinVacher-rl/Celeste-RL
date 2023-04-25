@@ -41,50 +41,67 @@ class Config:
         # Number of frames per action
         self.nb_frame_action = 5
 
-        self.screen_used = [2]
+        self.max_id_screen = 5
+        self.screen_used = [4]
 
         # Tas file to run for init the first screen
         self.init_tas_file = "console load 1 {}\n   38\n\n# end\n   1"
 
         self.screen_info = [
             ScreenInfo(
-                screen_id=1,
+                screen_id="1",
+                screen_value=1,
                 start_position = [[19, 144], [90, 128], [160, 80],  [260, 56]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=308, x_min=12,
                 y_max=195, y_min=0,
                 goal=[[ 250, 280], [0, 0]],
-                next_screen_id = 2
+                next_screen_id = "2"
             ),
             ScreenInfo(
-                screen_id=2,
+                screen_id="2",
+                screen_value=2,
                 start_position = [[264, -24], [360, -50], [403, -85], [445, -85], [530, -80]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=540, x_min=252,
                 y_max=0, y_min=-190,
                 goal=[[ 516, 540], [-190, -190]],
-                next_screen_id = 3
+                next_screen_id = "3"
             ),
             ScreenInfo(
-                screen_id=3,
+                screen_id="3",
+                screen_value=3,
                 start_position = [[528, -200], [645, -256], [580, -304], [700, -280], [760, -304]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=810, x_min=500,
                 y_max=-170, y_min=-370,
                 goal=[[ 764, 788], [-370, -370]],
+                next_screen_id = "4"
             ),
             ScreenInfo(
-                screen_id=4,
-                start_position = [[776, -392], [823, -480], [860, -472], [932, -480]],
+                screen_id="4",
+                screen_value=4,
+                start_position = [[776, -392], [823, -480], [860, -475], [932, -480]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=1050, x_min=750,
                 y_max=-360, y_min=-550,
                 goal=[[ 908, 932], [-550, -550]],
-                next_screen_id = 5
+                next_screen_id = "3b"
+            ),
+            ScreenInfo(
+                screen_id="3b",
+                screen_value=5,
+                start_position = [[928, -568], [1110, -584], [1120, -672], [1035, -688]],
+                first_frame=58,
+                tas_file=self.init_tas_file,
+                x_max=1180, x_min=880,
+                y_max=-540, y_min=-735,
+                goal=[[ 908, 932], [-735, -735]],
+                next_screen_id = "5"
             )
         ]
 

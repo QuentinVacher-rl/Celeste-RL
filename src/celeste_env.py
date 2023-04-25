@@ -293,9 +293,9 @@ class CelesteEnv():
             self.observation[2:4] = self.screen_info.normalize_x(reward_goal_y)
 
         if self.config.give_screen_value:
-            screen_value = self.screen_info.screen_id
+            screen_value = self.screen_info.screen_value
             index = self.index_start_obs - 1
-            self.observation[index] = screen_value - 1
+            self.observation[index] = screen_value / self.config.max_id_screen
 
         # Insert the observation
         for index in range(self.config.histo_obs+1):
@@ -450,11 +450,10 @@ class CelesteEnv():
 
             if "Stamina" in line:
                 # Stamina
-                observation[4] = float(l_text[14].split()[1])/110
+                observation[4] = float(line.split()[1])/110
 
             if "CanDash" in line:
                 dispo_dash = True
-
 
             # If dead
             if "Dead" in line:
