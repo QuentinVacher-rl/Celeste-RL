@@ -56,7 +56,7 @@ class SoftActorCritic():
 
         self.target_value.load_state_dict(param_value)
 
-    def insert_data(self, state, new_state, image, new_image, actions_probs, reward, done):
+    def insert_data(self, state, new_state, image, new_image, actions_probs, reward, done, j):
         self.memory.insert_data(state, new_state, image, new_image, actions_probs, reward, done)
 
     def choose_action(self, state, image):
@@ -88,11 +88,11 @@ class SoftActorCritic():
 
         for _ in range(self.epoch):
 
-            state, new_state, image, new_image, actions, reward, dones = self.memory.sample_data(self.batch_size)
+            state, new_state, image, new_image, actions, reward, terminated = self.memory.sample_data(self.batch_size)
 
             value = self.value(state, image).view(-1)
             next_value = self.target_value(new_state, new_image).view(-1)
-            next_value[dones.view(-1)] = 0.0
+            next_value[terminated.view(-1)] = 0.0
 
             action, log_probs = self.get_action_and_log_probs(state, image, rsample=False)
             critic_value_1 = self.critic_1(state, action, image)
