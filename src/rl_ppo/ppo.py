@@ -19,10 +19,10 @@ class PPO(nn.Module):
     def __init__(self, config_ppo: ConfigPPO, config_env: Config):
         super(PPO, self).__init__()
 
+        self.action_mode = "Continuous"
+
         self.device = config_env.device
         self.to(self.device)
-
-        self.action_mode = "Continuous"
 
         self.config = config_ppo
 
@@ -35,61 +35,72 @@ class PPO(nn.Module):
 
         self.nb_epochs = self.config.nb_epochs
 
+        self.size_histo = config_env.histo_obs
         self.state_size = config_env.observation_size
         self.action_size = config_env.action_size.shape[0]
-        self.image_size = config_env.size_image
+        self.use_image = config_env.use_image
+        self.image_size = config_env.size_image if self.use_image else None
 
-        self.buffer = Buffer(size=config_env.max_steps, action_size=self.action_size, state_size=self.state_size, image_size=self.image_size)
+        self.buffer = Buffer(size=self.config.size_buffer, action_size=self.action_size, state_size=self.state_size, image_size=self.image_size, size_histo=self.size_histo)
 
         self.clip_value = self.config.clip_value
 
-        self.actor_critic = ActorCritic(self.action_size, self.state_size, self.image_size, self.device, self.config)
+        self.actor_critic = ActorCritic(self.action_size, self.state_size, self.image_size, self.size_histo, self.device, self.config)
 
         if self.config.restore:
             self.load_model()
 
         self.optimizer = torch.optim.Adam(params=list(self.actor_critic.parameters()).copy(), lr=self.config.lr)
 
+        self.action_raw = None
+        self.log_prob = None
+        self.value = None
 
 
 
     def choose_action(self, state, image):
 
         # Formate state
-        image = torch.tensor(image, dtype=torch.float32).permute(0, 3, 1, 2)
-        state = torch.tensor(state, dtype=torch.float32)
-
+        state = torch.tensor(state, dtype=torch.float, device=self.device)
+        if self.use_image:
+            image = torch.tensor(image, dtype=torch.float, device=self.device)
         mu, var, value = self.actor_critic(state, image)
+        probs = tdist.Normal(mu, var)
+        actions = probs.sample()
+        action = torch.tanh(actions).to(self.device)
 
-        dist = tdist.Normal(mu, torch.sqrt(var))
-        action_probs = torch.clip(dist.sample(), -1, 0.999)
-        log_prob = dist.log_prob(action_probs)
+        self.action_raw = actions.cpu().detach().numpy()
+        self.log_prob = probs.log_prob(actions).cpu().detach().numpy()
+        self.value = value.cpu().detach().numpy()
+        return action.cpu().detach().numpy()
 
-        #action = 0 if action_prob < 0 else 1
+    def insert_data(self, state, new_state, image, new_image, action, reward, terminated, truncated):
+        self.buffer.insert_data(state, image, self.action_raw, self.log_prob, self.value, reward, terminated or truncated)
 
-        return action_probs, log_prob.detach(), value.detach()
+    def train(self):
 
-
-    def insert_data(self, state, image, actions, log_prob, value, reward, done):
-        self.buffer.insert_data(state, image, actions, log_prob, value, reward, done)
-
-    def train(self, episode: int):
+        if not self.buffer.full:
+            return
 
         returns = self.get_expected_returns()
 
-        old_actions = torch.tensor(self.buffer.actions)
+        old_actions = torch.tensor(self.buffer.actions, device=self.device)
 
-        old_action_log_probs = torch.tensor(self.buffer.log_prob)
-        old_advantage = returns - torch.tensor(self.buffer.values)
+        old_action_log_probs = torch.tensor(self.buffer.log_prob, device=self.device)
+        old_advantage = returns - torch.tensor(self.buffer.values, device=self.device)
 
         for _ in range(self.nb_epochs):
 
-            t_states = torch.tensor(self.buffer.states, requires_grad=True, dtype=torch.float32)
-            t_images = torch.tensor(self.buffer.images, requires_grad=True, dtype=torch.float32).permute(0, 3, 1, 2)
-            mu, var, values = self.actor_critic(t_states, t_images)
-            
+            t_states = torch.tensor(self.buffer.states, requires_grad=True, dtype=torch.float32, device=self.device)
+            if self.use_image:
+                t_images = torch.tensor(self.buffer.images, requires_grad=True, dtype=torch.float32, device=self.device)
+            else:
+                t_images = None
 
-            distribution = tdist.Normal(mu, torch.sqrt(var))
+            mu, var, values = self.actor_critic(t_states, t_images)
+
+
+            distribution = tdist.Normal(mu, var)
             entropy = distribution.entropy()
             action_log_probs = distribution.log_prob(old_actions)
 
@@ -110,18 +121,19 @@ class PPO(nn.Module):
         self.buffer.reset()
 
 
+
     def save_model(self):
-        torch.save(self.actor_critic.state_dict(), "network/model.pt")
-    
+        torch.save(self.actor_critic.state_dict(), self.save_file)
+
     def load_model(self):
-        model_state_dict = torch.load("network/model.pt")
-        self.actor_critic.load_state_dict(model_state_dict)
+        self.actor_critic.load_state_dict(torch.load(self.save_file))
+
 
     def get_expected_returns(self):
 
-        t_rewards = torch.tensor(self.buffer.rewards).flip(0)
-        t_dones = torch.tensor(self.buffer.dones).flip(0)
-        returns = torch.zeros(t_rewards.size())
+        t_rewards = torch.tensor(self.buffer.rewards, device=self.device).flip(0)
+        t_dones = torch.tensor(self.buffer.dones, device=self.device).flip(0)
+        returns = torch.zeros(t_rewards.size(), device=self.device)
 
         # Start from the end of `rewards` and accumulate reward sums
         # into the `returns` array
