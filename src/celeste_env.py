@@ -97,10 +97,10 @@ class CelesteEnv():
         frame_to_add_l2 = f"   {self.config.nb_frame_action-1}"
 
         # Add the corresponding actions (See CelesteTAS documentation for explanation)
-        if actions[0] == 2 and actions[2] != 0:
+        if actions[0] == 2:
             frame_to_add_l1 += ",R"
             frame_to_add_l2 += ",R"
-        if actions[0] == 0 and actions[2] != 2:
+        if actions[0] == 0:
             frame_to_add_l1 += ",L"
             frame_to_add_l2 += ",L"
         if actions[1] == 2:
@@ -110,13 +110,9 @@ class CelesteEnv():
             frame_to_add_l1 += ",D"
             frame_to_add_l2 += ",D"
 
-        if actions[2] == 0:
-            frame_to_add_l1 += ",L,X"
-            frame_to_add_l2 += ",L,X"
-            self.is_dashing = True
-        elif actions[2] == 2:
-            frame_to_add_l1 += ",R,X"
-            frame_to_add_l2 += ",R,X"
+        if actions[2] == 1:
+            frame_to_add_l1 += ",X"
+            frame_to_add_l2 += ",X"
             self.is_dashing = True
         else:
             self.is_dashing = False
@@ -157,7 +153,7 @@ class CelesteEnv():
 
 
         # Get observation and done info
-        observation, done, fail_see_death= self.get_madeline_info()
+        observation, terminated, fail_see_death= self.get_madeline_info()
 
         # Roll the observation array (because we want to save an historic of the former actions and observations)
         self.observation[self.index_start_obs:] = np.roll(self.observation[self.index_start_obs:], self.config.base_observation_size, axis=0)
@@ -186,12 +182,10 @@ class CelesteEnv():
 
             screen_obs = np.array(self.screen_obs[np.newaxis, ...])
 
-        if self.current_step == self.config.max_steps:
-            done = True
+        truncated = False
+        if self.current_step == self.config.max_steps and not terminated:
+            truncated = True
 
-
-        # Available actions avec 1 on every possible actions, 0 on every impossible ones
-        available_actions = [np.ones(current_action) for current_action in self.action_size]
 
         # Get the reward
         reward = self.get_reward()
@@ -199,7 +193,7 @@ class CelesteEnv():
         # No info passed but initiate for convention
         info = {"fail_death": fail_see_death}
 
-        return obs_vect, screen_obs, reward, done, available_actions, info
+        return obs_vect, screen_obs, reward, terminated, truncated, info
 
     def reset(self, test=False):
         """Reset the environnement
@@ -328,7 +322,7 @@ class CelesteEnv():
         available_actions = [np.ones(current_action) for current_action in self.action_size]
 
 
-        return obs_vect, screen_obs, available_actions, False
+        return obs_vect, screen_obs, False, False
 
     def render(self):
         """Render method

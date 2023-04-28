@@ -10,6 +10,7 @@ from config import Config
 #from qnetwork import MultiQNetwork as Algo
 
 import rl_sac
+import rl_ppo
 
 from utils.metrics import Metrics
 import torch
@@ -25,14 +26,14 @@ def main():
 
     # Create the instance of the general configuration and algorithm configuration
     config = Config()
-    config_algo = rl_sac.ConfigAlgo()
+    config_algo = rl_ppo.ConfigAlgo()
 
     # Create the environnement
     env = CelesteEnv(config)
-    env.controls_before_start()
+#    env.controls_before_start()
 
     # Create the RL algorithm
-    algo = rl_sac.Algo(config_algo, config)
+    algo = rl_ppo.Algo(config_algo, config)
 
     # Create the metrics instance
     metrics = Metrics(config)
@@ -47,22 +48,22 @@ def main():
         for episode_train in range(1, config.nb_train_episode + 1):
 
             # Reset the environnement
-            state, image, _, done = env.reset()
+            state, image, terminated, truncated = env.reset()
 
             ep_reward = list()
 
             # For each step
-            while not done:
+            while not terminated and not truncated:
 
                 # Get the actions
                 actions = algo.choose_action(state, image)
-
+                #print(actions)
                 # Step the environnement
-                next_state, next_image, reward, done, _, info = env.step(actions)
+                next_state, next_image, reward, terminated, truncated, info = env.step(actions)
 
                 if not info["fail_death"]:
                     # Insert the data in the algorithm memory
-                    algo.insert_data(state, next_state, image, next_image, actions, reward, done)
+                    algo.insert_data(state, next_state, image, next_image, actions, reward, terminated, truncated)
 
                     # Actualise state
                     state = next_state
@@ -73,9 +74,7 @@ def main():
 
                     ep_reward.append(reward)
                 else:
-                    print("fail")
-                    algo.memory.change_done_last_index()
-                    done=True
+                    truncated=True
 
             metrics.print_train_step(learning_step, episode_train, reward)
 
@@ -87,20 +86,20 @@ def main():
             reward_ep = list()
 
             # Reset the environnement
-            state, image, _, done = env.reset(test=True)
+            state, image, terminated, truncated = env.reset(test=True)
 
             # For each step
-            while env.current_step < config.max_steps and not done:
+            while not terminated and not truncated:
 
                 # Get the actions
                 actions = algo.choose_action(state, image)
 
                 # Step the environnement
-                next_state, next_image, reward, done, _, info = env.step(actions)
+                next_state, next_image, reward, terminated, truncated, info = env.step(actions)
 
                 if info["fail_death"]:
                     fail_death = True
-                    break
+                    truncated = True
 
                 # Actualise state
                 state = next_state
