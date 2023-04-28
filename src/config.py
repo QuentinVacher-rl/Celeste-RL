@@ -28,7 +28,7 @@ class Config:
         self.nb_train_episode = 200
 
         # Test episode per learning step
-        self.nb_test_episode = 20
+        self.nb_test_episode = 10
 
         # -------------------------------------------
 
@@ -43,7 +43,6 @@ class Config:
 
         self.max_id_screen = 5
         self.screen_used = [0,1,2,3,4]
-
         # Tas file to run for init the first screen
         self.init_tas_file = "console load 1 {}\n   38\n\n# end\n   1"
 
@@ -128,7 +127,7 @@ class Config:
         # -------------------------------------------
 
         # Action size vector
-        self.action_size = np.array([3,3,2,3,2])
+        self.action_size = np.array([3,3,3,3,2])
         # 9 for dashes in each direction
         # 9 for right, left, up, down + diagonals
         # 2 for jump
@@ -174,7 +173,7 @@ class Config:
             self.observation_size += 1
 
         # Reward for death
-        self.reward_death = 0
+        self.reward_death = -5
 
 
         # Reward when screen passed
@@ -184,10 +183,10 @@ class Config:
         self.reward_wrong_screen_passed = 0
 
         # Reward when nothing append
-        self.natural_reward = 6
+        self.natural_reward = -0.5
 
         # True if the image is used for learning
-        self.use_image = False
+        self.use_image = True
 
 
         # -------------------------------------------

@@ -97,10 +97,10 @@ class CelesteEnv():
         frame_to_add_l2 = f"   {self.config.nb_frame_action-1}"
 
         # Add the corresponding actions (See CelesteTAS documentation for explanation)
-        if actions[0] == 2:
+        if actions[0] == 2 and actions[2] != 0:
             frame_to_add_l1 += ",R"
             frame_to_add_l2 += ",R"
-        if actions[0] == 0:
+        if actions[0] == 0 and actions[2] != 2:
             frame_to_add_l1 += ",L"
             frame_to_add_l2 += ",L"
         if actions[1] == 2:
@@ -110,9 +110,13 @@ class CelesteEnv():
             frame_to_add_l1 += ",D"
             frame_to_add_l2 += ",D"
 
-        if actions[2] != 0:
-            frame_to_add_l1 += ",X"
-            frame_to_add_l2 += ",X"
+        if actions[2] == 0:
+            frame_to_add_l1 += ",L,X"
+            frame_to_add_l2 += ",L,X"
+            self.is_dashing = True
+        elif actions[2] == 2:
+            frame_to_add_l1 += ",R,X"
+            frame_to_add_l2 += ",R,X"
             self.is_dashing = True
         else:
             self.is_dashing = False
@@ -290,7 +294,7 @@ class CelesteEnv():
 
             # Make sure to normalize the values
             self.observation[0:2] = self.screen_info.normalize_x(reward_goal_x)
-            self.observation[2:4] = self.screen_info.normalize_x(reward_goal_y)
+            self.observation[2:4] = self.screen_info.normalize_y(reward_goal_y)
 
         if self.config.give_screen_value:
             screen_value = self.screen_info.screen_value
@@ -521,7 +525,7 @@ class CelesteEnv():
             return self.config.reward_wrong_screen_passed
 
         # Else reward is natural reward
-        return self.config.natural_reward * np.square(0.6 - self.screen_info.distance_goal(self.pos_x, self.pos_y))
+        return self.config.natural_reward * np.square(self.screen_info.distance_goal(self.pos_x, self.pos_y) / 0.7)
 
     def controls_before_start(self):
         """Controls before the start of the test: 
