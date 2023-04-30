@@ -25,10 +25,10 @@ class Config:
         self.max_steps = 150
 
         # Train episode per learning step
-        self.nb_train_episode = 200
+        self.nb_train_episode = 100
 
         # Test episode per learning step
-        self.nb_test_episode = 10
+        self.nb_test_episode = 5
 
         # -------------------------------------------
 
@@ -41,38 +41,39 @@ class Config:
         # Number of frames per action
         self.nb_frame_action = 5
 
-        self.max_id_screen = 5
-        self.screen_used = [0,1,2,3,4]
+        self.screen_used = [0, 1]
+        
+        self.max_screen_value = max(self.screen_used)
         # Tas file to run for init the first screen
         self.init_tas_file = "console load 1 {}\n   38\n\n# end\n   1"
 
         self.screen_info = [
             ScreenInfo(
                 screen_id="1",
-                screen_value=1,
+                screen_value=0,
                 start_position = [[19, 144], [90, 128], [160, 80],  [260, 56]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
-                x_max=308, x_min=12,
-                y_max=195, y_min=0,
+                x_max=540, x_min=12,#x_max=308, x_min=12,
+                y_max=195, y_min=-190,#y_max=195, y_min=0,
                 goal=[[ 250, 280], [0, 0]],
                 next_screen_id = "2"
             ),
             ScreenInfo(
                 screen_id="2",
-                screen_value=2,
+                screen_value=1,
                 start_position = [[264, -24], [360, -50], [403, -85], [445, -85], [530, -80]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
-                x_max=540, x_min=252,
-                y_max=0, y_min=-190,
+                x_max=540, x_min=12,#x_max=540, x_min=252,
+                y_max=195, y_min=-190,#y_max=0, y_min=-190,
                 goal=[[ 516, 540], [-190, -190]],
                 next_screen_id = "3"
             ),
             ScreenInfo(
                 screen_id="3",
-                screen_value=3,
-                start_position = [[528, -200], [645, -256], [580, -304], [700, -280], [760, -304]],
+                screen_value=2,
+                start_position = [[528, -200], [645, -256], [580, -304], [600, -230], [700, -280], [760, -304]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=810, x_min=500,
@@ -82,7 +83,7 @@ class Config:
             ),
             ScreenInfo(
                 screen_id="4",
-                screen_value=4,
+                screen_value=3,
                 start_position = [[776, -392], [823, -480], [860, -475], [932, -480]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
@@ -93,7 +94,7 @@ class Config:
             ),
             ScreenInfo(
                 screen_id="3b",
-                screen_value=5,
+                screen_value=4,
                 start_position = [[928, -568], [1059, -568], [1110, -584], [1120, -672], [1035, -688]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
@@ -103,6 +104,7 @@ class Config:
                 next_screen_id = "5"
             )
         ]
+
 
         # Basic waiting time (equal to 1 frame)
         self.sleep = 0.017
@@ -127,7 +129,7 @@ class Config:
         # -------------------------------------------
 
         # Action size vector
-        self.action_size = np.array([3,3,3,3,2])
+        self.action_size = np.array([3,3,2,3,2])
         # 9 for dashes in each direction
         # 9 for right, left, up, down + diagonals
         # 2 for jump
@@ -173,7 +175,7 @@ class Config:
             self.observation_size += 1
 
         # Reward for death
-        self.reward_death = -5
+        self.reward_death = -1
 
 
         # Reward when screen passed
@@ -186,7 +188,10 @@ class Config:
         self.natural_reward = -0.5
 
         # True if the image is used for learning
-        self.use_image = True
+        self.use_image = False
+
+        # True will set done if screen is based, False only when last screen is passed
+        self.one_screen = False
 
 
         # -------------------------------------------

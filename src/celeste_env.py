@@ -20,6 +20,9 @@ class CelesteEnv():
         # Create config
         self.config = config
 
+        # Init max step at config value
+        self.max_steps = self.config.max_steps
+
         # Info about the current screen
         self.screen_info = self.config.screen_info[0]
 
@@ -183,7 +186,7 @@ class CelesteEnv():
             screen_obs = np.array(self.screen_obs[np.newaxis, ...])
 
         truncated = False
-        if self.current_step == self.config.max_steps and not terminated:
+        if self.current_step == self.max_steps and not terminated:
             truncated = True
 
 
@@ -205,8 +208,12 @@ class CelesteEnv():
             tuple: New state, reward
         """
 
-        # Init the screen by choosing randomly in the screen used
-        self.screen_info = self.config.screen_info[np.random.choice(self.config.screen_used)]
+        # Init the screen by choosing randomly in the screen used if not testing
+        if not test:
+            self.screen_info = self.config.screen_info[np.random.choice(self.config.screen_used)]
+        # If testing and checking all the screen, start with the first screen
+        elif not self.config.one_screen:
+            self.screen_info = self.config.screen_info[0]
 
         # Init the current tas file
         if not test:
@@ -216,6 +223,9 @@ class CelesteEnv():
 
         # Init the current step
         self.current_step = 0
+
+        # Init max step at config value
+        self.max_steps = self.config.max_steps
 
         # True if Madeline is dead
         self.dead = False
@@ -293,7 +303,7 @@ class CelesteEnv():
         if self.config.give_screen_value:
             screen_value = self.screen_info.screen_value
             index = self.index_start_obs - 1
-            self.observation[index] = screen_value / self.config.max_id_screen
+            self.observation[index] = screen_value / self.config.max_screen_value
 
         # Insert the observation
         for index in range(self.config.histo_obs+1):
@@ -317,12 +327,32 @@ class CelesteEnv():
 
             screen_obs = np.array(self.screen_obs[np.newaxis, ...])
 
-
-        # Available actions avec 1 on every possible actions, 0 on every impossible ones
-        available_actions = [np.ones(current_action) for current_action in self.action_size]
-
-
         return obs_vect, screen_obs, False, False
+
+    def change_next_screen(self):
+        """Change the screen Maddeline is in.
+        To use only if it is node the last screen.
+        """
+        # Init the screen by choosing randomly in the screen used
+        self.screen_info = self.config.screen_info[self.screen_info.screen_value + 1]
+
+        # Add the necessary step to the next screen
+        self.max_steps += self.config.max_steps
+
+        # If the goal coords are given, put it in the observation vector
+        if self.config.give_goal_coords:
+            # Get the two coords for X and Y (coords create a square goal)
+            reward_goal_x = np.array(self.screen_info.goal[0])
+            reward_goal_y = np.array(self.screen_info.goal[1])
+
+            # Make sure to normalize the values
+            self.observation[0:2] = self.screen_info.normalize_x(reward_goal_x)
+            self.observation[2:4] = self.screen_info.normalize_y(reward_goal_y)
+
+        if self.config.give_screen_value:
+            screen_value = self.screen_info.screen_value
+            index = self.index_start_obs - 1
+            self.observation[index] = screen_value / self.config.max_screen_value
 
     def render(self):
         """Render method
@@ -425,6 +455,7 @@ class CelesteEnv():
 
         # Init done at False
         done = False
+        self.screen_passed = False
 
         for line in l_text:
 
@@ -491,7 +522,15 @@ class CelesteEnv():
                 # If screen pasted. Only on screen 1 for now, will be change later
                 if f"[{self.screen_info.next_screen_id}]" in line:
                     self.screen_passed = True
-                    done = True
+                    if self.config.one_screen:
+                        done = True
+
+                    else:
+                        if self.screen_info.screen_value == self.config.max_screen_value:
+                            done = True
+
+                        else:
+                            self.change_next_screen()
 
                 # Else if the current screen id is not in text, then the wrong screen as been pasted
                 elif f"[{self.screen_info.screen_id}]" not in line:
@@ -514,7 +553,7 @@ class CelesteEnv():
         # If screen passed
         if self.screen_passed:
             return self.config.reward_screen_passed
-        
+
         if self.wrong_screen_passed:
             return self.config.reward_wrong_screen_passed
 
