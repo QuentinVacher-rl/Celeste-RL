@@ -2,6 +2,10 @@
 
 Celeste is a fantastic game that I've spent hours playing. Last year, I discovered Reinforcement Learning (RL) for work-related purposes, and the idea of creating an AI capable of playing Celeste using RL came to my mind in early February 2023.
 
+Here is a good attemp of the AI on the three first screens : 
+(It is really slow because I converted it to gif, Github does not support mp4)
+![Result](images/result.gif)
+
 ## Why Celeste is Interesting for an RL Problem
 
 ### Celeste has really simple controls. 
@@ -88,6 +92,8 @@ For this project, I've had the opportunity to implement and test several algorit
 ## Results:
 
 Coming soon :)
+
+I have only uploaded the video at the top for know.
 
 I have some promising results on the first two screens of the game right now with SAC, without using the image. The challenge is that even after 36 hours of training, SAC is unable to learn from the image. I'm not yet sure why and how to correct this.
 
