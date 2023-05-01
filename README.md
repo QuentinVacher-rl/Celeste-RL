@@ -1,143 +1,100 @@
-# Create an AI bot playing Celeste
+# Creating an AI Bot to Play Celeste
 
-Celeste is a fantastic game that I have played for hours. Last year I discovered Reinforcement Learning for work issues, the idee of creating an AI using RL able to play Celeste crossed my mind in early february 2023.
+Celeste is a fantastic game that I've spent hours playing. Last year, I discovered Reinforcement Learning (RL) for work-related purposes, and the idea of creating an AI capable of playing Celeste using RL came to my mind in early February 2023.
 
-## Why Celeste is intersting for a RL problem
+## Why Celeste is Interesting for an RL Problem
 
-### Celeste have really simple commands :
-Maddeline, the hero of the game has only four actions :
-- Moving in eight directions (left, right, up, down and diagonals)
-- Jump
-- Grab a wall
-- Dash
+### Celeste has really simple controls. 
 
-There is no inventory or need to use the mouse or other actions that requires complicated mechanisms.
-This advantage should allow a RL algorithm to easily learn the actions
+Madeline, the protagonist of the game, has only four actions:
 
-### The format of the game is very suitable to a Reinforcement Learning problem.
-If you have never played Celeste, the game is devided into seven levels (for the main game), but each level is also devided into several screen.
-In each screen Maddeline has a respawn point, the goal is to go from the start of the screen to the end without dying.
+1. Move in eight directions (left, right, up, down, and diagonals)
+2. Jump
+3. Grab a wall
+4. Dash
+
+There is no need for an inventory, nor any use of the mouse, or other actions requiring complicated mechanisms. This advantage should allow an RL algorithm to easily learn the actions.
+
+### The format of the game is very suitable for a Reinforcement Learning problem. 
+
+For those who have never played Celeste, the game is divided into seven levels (for the main game), but each level is also divided into several screens. In each screen, Madeline has a respawn point. The goal is to traverse from the start of the screen to the end without dying. If you die, no problem; you just respawn where you were without any penalties. This creates an excellent episodic and static environment. You can die hundreds of times without a game over; only your death counter will increase.
 ![First_screen](images/First_screen.png)
-If you die, no problem you just respawn where you where without any penalties. This create very good episodics and statics environnement, you can die hundreads of time there is no game over, only your death counter will increase a lot.
 
-Because their is several screens but all static, you can in fact create a changing environnement but also static, that is really intersting for RL algorithms.
+Because there are several screens, all of them static, you can create a changing but also static environment, which is really interesting for RL algorithms.
 
+### Celeste is Emulatable
 
-### Celeste is emulatable
-One really import part of a Reinforcement Learning problem is how quickly the environnement will execute and how you can interact with the environnement.
-Well thanks to the Celeste Community, all this is possible. 
-I am not at all a super great game developper, Celeste is a c# game and all RL algorithm used python librairies. Interaction between Python and C# would have been to hard for me to make. 
+A crucial part of a Reinforcement Learning problem is how quickly the environment will execute and how you can interact with it. Thanks to the Celeste Community, this is all possible. I'm not a proficient game developer, and Celeste is a C# game, while all RL algorithms use Python libraries. Interaction between Python and C# would have been too hard for me to implement.
 
-But Celeste has a Great community that create mods and espacially one, CelesteTAS. A TAS is a bot playing Celeste to which you provide all the commands at each actions, it allow players to test the limits of the game. This mod work with a text editor that send request to the mod and allow several things: 
-- Send actions to the game
-- Load screen where you want in a level
-- Accelerate or Pause the game
-- Get current informations like the position, speed etc of Maddelin
+Fortunately, Celeste has a great community that creates mods, especially one, CelesteTAS. A TAS (Tool-Assisted Speedrun) bot plays Celeste by executing all the commands at each action, allowing players to test the limits of the game. This mod works with a text editor that sends requests to the mod and allows several things:
 
-Thanks to CelesteTAS I have been able to create an easy iteraction with the game that make the game around 3 times quicker that the normal game and with more accuracy.
-Also I can choose the spawn point of Maddeline, that help a lot the training because you can spawn Maddeline far or close to the goal to help her discover the goal, because even in the first level, it is almost impossible to randomly finished the level with the clasic start point.
+1. Send actions to the game
+2. Load any screen you want in a level
+3. Accelerate or Pause the game
+4. Get current information like the position, speed, etc., of Madeline
 
+Thanks to CelesteTAS, I've been able to create an easy interaction with the game, making it about three times faster than the normal game with more precision. I can also choose the spawn point for Madeline, which helps a lot in training because you can spawn Madeline close or far from the goal to help her discover it. Even in the first level, it's nearly impossible to randomly finish the level with the classic start point.
 
-## Reinforcement Learning problem formalisation
+## Formalization of the Reinforcement Learning Problem
 
-An episode start with Maddeline, and for now it end either if Maddeline died or change screen (or at a certain number of steps). In the future I will delete the end of an episode if Maddeline change screen.
+An episode starts with Madeline, and for now, it ends either if Madeline dies, changes screens, or after a certain number of steps. In the future, I plan to remove the episode end when Madeline changes screens.
 
-To create a Reinforcement Learning problem, you have to identity several components:
-### The Actor
-Obviously the Actor is Maddeline
+To create a Reinforcement Learning problem, you need to identify several components:
 
-### The actions
+### The Actor: 
 
-An important point here : Celeste is a 60 fps game, it mean that you can litteraly take 60 actions per step, which is A LOT ! I decided to simplify that by giving 5 frames per actions, it make the learning easier and for several reasons it simplifing other things (some action do not really apply if you do them 1 frame)
+Obviously, the Actor is Madeline.
 
-I listed above the different actions ingame, it is quite the same of the RL problem but with two distinction : 
-- Maddeline do not have one action to move in eight direction, but two actions two move in two directions, one to go right and left and one to go up and down
-- If Maddeline jump for only one frame, it make a little jump, so I decide to devide the jump action into three : no jump, jump one frame, jump five frames
+### The Actions: 
 
-This lead to this multi-action space [3, 3, 2, 3, 2]
- - Action for moving horizontaly : 0 for left, 1 for nothing, 2 for right
- - Action for moving vertically : 0 for down, 1 for nothing, 2 for up
- - Action for Dashing : 0 for nothing, 1 for dashing
- - Action for Jumping : 0 for no jump, 1 for little jump, 2 for big jump
- - Action for Grab/Climb : 0 for no grab, 1 for grab
+An important point here is that Celeste is a 60 fps game, meaning you can literally take 60 actions per step, which is A LOT! I decided to simplify this by allowing five frames per action, which makes the learning easier and simplifies other things (some actions don't really apply if you do them for just one frame).
 
-### The observation space
+I've previously listed the different actions in the game; they're quite similar for the RL problem but with two distinctions:
 
-#### First case : only the information
-With all the data given by the CelesteTAS mod, a observation is possible, the standard observation size is eleven with value between 0 and 1 or -1 and 1 :
-- 0, min=0, max=1 : Position on x axis noramlize with the size of the screen
-- 1, min=0, max=1: Position on y axis normalize with the size of the screen
-- 2, min=-1, max=1 : Speed on x reduce by 6
-- 3, min=-1, max=1 : Speed on y reduce by 6
-- 4, min=0, max=1 : Stamina, max stamina is 110 so stamina is devide by 110
-- 5, min=0, max=1 : 0.5 if maddeline touch a wall on the left, 1 if maddeline touch a wall on the right, else 0 
-- 6, min=0, max=1 : State of maddeline, 0.5 if she is dashing, 1 if she is climb, else 0
-- 7, min=0, max=1 : 1 If Maddeline can dash, else 0
-- 8, min=0, max=1 : Particular value due to Celeste, normaly you should only can jump if you touch the ground, but Celeste is a generous game, if you leave the ground you still have 5 frames to jump. So Value here is 1 if maddeline is on the ground, else the number of frame until maddeline can not jump (divide by 5) and 0 if Maddeline can not jump
-- 9, min=0, max=1 : When Maddeline is jumping, there is an info about how much step there are until jump action end. It is also normalize to one
-- 10, min=0, max=1 : When Maddeline is dashing, there is an info about how much step there are until the dash end. It is also normalize to one
+- Madeline doesn't have one action to move in eight directions, but two actions to move in two directions: one to go right and left, and one to go up and down.
+- If Madeline jumps for only one frame, it's a small jump, so I decided to divide the jump action into three: no jump, jump one frame, jump five frames.
 
-with this some info can be added like the coordonates of the goal of the screen or the index of the screen. Has well has a historic information with the states of the former states
+This leads to a multi-action space [3, 3, 2, 3, 2]:
 
-#### Second case : The image game
-There is a possibility to give the whole screen image to Maddeline with a reduction factor. It should allow the agent to really understand a screen and to learn how to finished a screen that have not been trained before.
+- Action for moving horizontally: 0 for left, 1 for nothing, 2 for right.
+- Action for moving vertically: 0 for down, 1 for nothing, 2 for up.
+- Action for Dashing: 0 for nothing, 1 for dashing.
+- Action for Jumping: 0 for no jump, 1 for small jump, 2 for big jump.
+- Action for Grab/Climb: 0 for no grab, 1 for grab.
 
-You can has well give historic of image.
+### The Observation Space:
 
-With the image case, you still give all the information in first case, there is a CNN to use the image then concatenate with general informations.
+#### First case: Information only
 
-### The reward
+With all the data provided by the CelesteTAS mod, an observation is possible. The standard observation size is eleven with values between 0 and 1, or -1 and 1, and includes position, speed, stamina, state, ability to dash or jump, etc. This can be supplemented with additional information like the coordinates of the screen's goal or the index of the screen, as well as historical information with the states of previous steps.
 
-I have tested a lot of different possibility for the reward and I have one that give great results.
+#### Second case: The Game Image
 
-The reward is defined like this : 
-- reward = 100 if goal is reached
-- reward = -1 if Maddeline is dead
-- reward = 0 if Maddeline reached an unwanted screen (
-- reward = -1 * (distance_from_goal)² in other case (normalize to interval [-1, 0])
+There's the possibility to provide Madeline with the entire screen image, reduced in size. It should allow the agent to really understand a screen and learn how to finish a screen it hasn't been trained on before. You can also provide a history of images.
 
-The distance_from_goal is a really small value compare to the reward for goal reached, it is important because most levels are not linear, only get closer to the goal is not the objective but more of an indicator. Also I do not give big penalties for death for two reasons, first is because I do not want Maddeline to get stuck in suboptimal solutions (like just stop moving, I have those problems with PPO), second one is that death are not that bad in the game so there is no reasons to give big penalties.
+### The Reward:
 
-## What algorithms are implemented
+I have tested various possibilities for the reward, and one approach has given great results:
 
-For me, this project was a great opportunity to implement and test myself several algorithms
+- Reward = 100 if goal is reached
+- Reward = -1 if Madeline dies
+- Reward = 0 if Madeline reaches an unwanted screen
+- Reward = -1 * (distance_from_goal)^2 in other cases (normalized to the interval [-1, 0])
 
-### Deep Q-Learning
-I first start with an easy Deep Reinforcement Learning algorithm just to test that the environnement work fine.
+## Implemented Algorithms:
 
-Nothing really interesting, it gave small results but it was learning, I was not sure because I tried multiple outputs Deep Q-Learning for the multiple actions.
-Currently the version in the code of Deep Q-Learning is not working because I have not touch it from long time ago
+For this project, I've had the opportunity to implement and test several algorithms, including Deep Q-Learning, A2C, PPO, and SAC. Each of these algorithms has had its strengths and weaknesses in dealing with the environment and learning the game effectively. Currently, SAC is yielding the best results.
 
-### A2C
-Not really A2C neither A3C in fact. I can not run multiple instance of Celeste as the same time so it is like a classic Actor-Critic. I was not sure it was stall called Actor-Critic that is why I called it A2C.
+## Results:
 
-It gave greater results compare to Deep Q-Learning but it did not really learn with enough efficiency because I did not knew how to make multiple output for A2C so I put all the couples of actions as output (it was like 72 possible actions which is a lot).
+Coming soon :)
 
-Has Deep Q-Learning, the current A2C is not working because it is not compatible with the current environnement and I should change the output system to use it correctly
+I have some promising results on the first two screens of the game right now with SAC, without using the image. The challenge is that even after 36 hours of training, SAC is unable to learn from the image. I'm not yet sure why and how to correct this.
 
-### PPO 
-When I discovered Reinforcement Learning for my work, the goal was to implement MAPPO, a Multi-agent version of PPO. It was my very first deep RL algorithms but due to deadlines I had to take implemented version and adapted. For this project it was really important for me to implement from scratch PPO. 
+## Future Plans:
 
-PPO is able to give great results, I only have implemented the classic version and it often get stuck in suboptimal solutions : Maddeline just stop moving to avoid death penalty.
-
-For PPO is decided to create a continuous output. It a bit harder to learn but it allow to have easily make multi action with only one output layer. 
-
-### SAC
-SAC is for now the best algorithm that give really good results. I also implemented only the classic version without the adjusted temperature.
-
-I am only working with this one for now and I will probably add Adjusted temperature or LSTM/RNN layers in the future.
-
-## Results
-
-Comming soon :) 
-
-I have some great results on the 2 first screen of the game right now with SAC without using the image.
-What bother me is that even with 36 hours of training, SAC is unable to learn with the image. Right now I do not know why and how to correct this.
-
-## Next things I want to do : 
-- Add Adjusted temperature to SAC
-- Add LSTM or RNN layers to SAC and other algorithms in the future
-- Create a record method to show results 
-- Update PPO with the extension to avoid getting stuck in suboptimal solutions
-- Update A2C and Deep Q-Learning to make them runnable
-
+- Add Adjusted Temperature to SAC
+- Add LSTM or RNN layers to SAC and other future algorithms
+- Create a recording method to showcase results
+- Update PPO with extensions to avoid getting stuck in suboptimal solutions
+- Update A2C and Deep Q-Learning to make them runnable.
