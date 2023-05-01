@@ -4,7 +4,7 @@ Celeste is a fantastic game that I've spent hours playing. Last year, I discover
 
 Here is a good attemp of the AI on the three first screens : 
 (It is really slow because I converted it to gif, Github does not support mp4)
-![Result](images/result.gif)
+![Result](images/result.gif) 
 
 ## Why Celeste is Interesting for an RL Problem
 
