@@ -4,6 +4,7 @@ Celeste is a fantastic game that I've spent hours playing. Last year, I discover
 
 Here is a good attemp of the AI on the three first screens : 
 (It is obviously quicker than the vanilla game because I emulatable it)
+
 ![Result](images/result.gif) 
 
 
