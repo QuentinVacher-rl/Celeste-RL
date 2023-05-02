@@ -24,6 +24,9 @@ class Metrics:
             "Level passed": [0]
         }
 
+        # Best reward ever getten on test
+        self.best_reward = -1 * np.inf
+
         # list to store all the testing rewards gotten
         self.all_reward = list()
 
@@ -61,10 +64,11 @@ class Metrics:
         self.nb_total_step += len(reward)
 
         # Get the mean of the reward
-        mean_reward = np.mean(reward)
+        mean_reward = np.sum(reward)
 
         # Add the reward to all the reward
         self.all_reward.append(mean_reward)
+
 
         # Check death
         if reward[-1] == self.config.reward_death and len(reward) < self.config.max_steps:
@@ -81,10 +85,16 @@ class Metrics:
 
 
 
-        # Init the new max reward to False
+        # Init the new max reward and new best to False
         new_max_reward = False
+        new_best_reward = False
 
         restore = False
+
+
+        if mean_reward > self.best_reward:
+            self.best_reward = mean_reward
+            new_best_reward = True
 
 
         # Only print graph is the episode is multiple of value to print
@@ -119,7 +129,7 @@ class Metrics:
             for value in self.info_level.values():
                 value.append(0)
 
-        return new_max_reward, restore
+        return new_max_reward, new_best_reward, restore
 
     def print_train_step(self, step, episode: int, reward):
         """Print the metrics infos at the current learning step

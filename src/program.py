@@ -6,11 +6,7 @@ import absl.logging
 from celeste_env import CelesteEnv
 from config import Config
 
-#from config_multi_qnetworks import ConfigMultiQnetworks as Config_algo
-#from qnetwork import MultiQNetwork as Algo
-
 import rl_sac
-import rl_ppo
 
 from utils.metrics import Metrics
 import torch
@@ -26,14 +22,13 @@ def main():
 
     # Create the instance of the general configuration and algorithm configuration
     config = Config()
-    config_algo = rl_ppo.ConfigAlgo()
+    config_algo = rl_sac.ConfigAlgo()
 
     # Create the environnement
     env = CelesteEnv(config)
-#    env.controls_before_start()
 
     # Create the RL algorithm
-    algo = rl_ppo.Algo(config_algo, config)
+    algo = rl_sac.Algo(config_algo, config)
 
     # Create the metrics instance
     metrics = Metrics(config)
@@ -42,6 +37,8 @@ def main():
 
     # For every episode
     for learning_step in range(1, config.nb_learning_step + 1):
+
+        env.controls_before_start()
 
         # Reset nb terminated
         metrics.nb_terminated_train = 0
@@ -110,14 +107,19 @@ def main():
 
             if not fail_death:
                 # Insert the metrics
-                save_model, restore = metrics.insert_metrics(learning_step, reward_ep, episode_test)
+                save_model, save_video, restore = metrics.insert_metrics(learning_step, reward_ep, episode_test)
 
                 # Print the information about the episode
                 metrics.print_test_step(learning_step, episode_test)
+
+
+                if save_video:
+                    env.save_video()
             else:
                 episode_test -= 1
 
-
+        if algo.has_save_memory:
+            algo.save_memory()
 
         # Save the model (will be True only if new max reward)
         if save_model:
@@ -126,6 +128,7 @@ def main():
         if restore:
             print("restore")
             algo.load_model()
+
 
 
 

@@ -30,6 +30,11 @@ class Config:
         # Test episode per learning step
         self.nb_test_episode = 5
 
+        # True if you want a video for the best test
+        self.video_best_screen = True
+        self.fps = 90
+        self.region = (1,266,959,804)
+
         # -------------------------------------------
 
 
@@ -41,7 +46,10 @@ class Config:
         # Number of frames per action
         self.nb_frame_action = 5
 
-        self.screen_used = [0, 1]
+        self.screen_used = [0, 1, 2, 3]
+
+        self.prob_screen_used = np.array([1, 1, 1, 3])
+        self.prob_screen_used = self.prob_screen_used / np.sum(self.prob_screen_used)
         
         self.max_screen_value = max(self.screen_used)
         # Tas file to run for init the first screen
@@ -54,8 +62,8 @@ class Config:
                 start_position = [[19, 144], [90, 128], [160, 80],  [260, 56]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
-                x_max=540, x_min=12,#x_max=308, x_min=12,
-                y_max=195, y_min=-190,#y_max=195, y_min=0,
+                x_max=308, x_min=12,
+                y_max=195, y_min=0,
                 goal=[[ 250, 280], [0, 0]],
                 next_screen_id = "2"
             ),
@@ -65,15 +73,15 @@ class Config:
                 start_position = [[264, -24], [360, -50], [403, -85], [445, -85], [530, -80]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
-                x_max=540, x_min=12,#x_max=540, x_min=252,
-                y_max=195, y_min=-190,#y_max=0, y_min=-190,
+                x_max=540, x_min=252,
+                y_max=0, y_min=-190,
                 goal=[[ 516, 540], [-190, -190]],
                 next_screen_id = "3"
             ),
             ScreenInfo(
                 screen_id="3",
                 screen_value=2,
-                start_position = [[528, -200], [645, -256], [580, -304], [600, -230], [700, -280], [760, -304]],
+                start_position = [[528, -200], [645, -256], [580, -304], [600, -230], [508, -300], [700, -280], [760, -304]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=810, x_min=500,
@@ -84,7 +92,7 @@ class Config:
             ScreenInfo(
                 screen_id="4",
                 screen_value=3,
-                start_position = [[776, -392], [823, -480], [860, -475], [932, -480]],
+                start_position = [[776, -392], [823, -480], [860, -475], [932, -480], [780, -450], [920, -520]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=1050, x_min=750,
@@ -155,7 +163,7 @@ class Config:
             self.base_observation_size = self.base_observation_size + len(self.action_size)
 
         # Quantity of former iteration state and action (if action given) put if the observation vector
-        self.histo_obs = 2
+        self.histo_obs = 8
 
         # Calculate the real size of observation
         self.observation_size = (self.histo_obs + 1) * self.base_observation_size
@@ -185,13 +193,16 @@ class Config:
         self.reward_wrong_screen_passed = 0
 
         # Reward when nothing append
-        self.natural_reward = -0.5
+        self.natural_reward = -1
 
         # True if the image is used for learning
         self.use_image = False
 
         # True will set done if screen is based, False only when last screen is passed
         self.one_screen = False
+
+        # Train with start pos of screens only
+        self.start_pos_only = False
 
 
         # -------------------------------------------

@@ -2,12 +2,13 @@ import torch
 
 class ReplayBuffer:
 
-    def __init__(self, size, action_size, state_size, image_size, size_histo):
+    def __init__(self, size, action_size, state_size, image_size, size_histo, file_save):
         self.size = size
         self.state_size = state_size
         self.action_size = action_size
         self.image_size = image_size
         self.size_histo = size_histo
+        self.file_save = file_save
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.image_device = torch.device("cpu")
         self.states = torch.zeros((size+1, state_size), device=self.device)
@@ -49,3 +50,20 @@ class ReplayBuffer:
             sampled_new_images = None
 
         return sampled_states, sampled_new_states, sampled_images, sampled_new_images, sampled_actions_probs, sampled_rewards, sampled_terminated
+
+    def save(self):
+        torch.save(self.states, "{}/states.pt".format(self.file_save))
+        torch.save(self.actions_probs, "{}/actions.pt".format(self.file_save))
+        torch.save(self.rewards, "{}/rewards.pt".format(self.file_save))
+        torch.save(self.terminated, "{}/dones.pt".format(self.file_save))
+        if self.image_size is not None:
+            torch.save(self.images, "{}/images.pt".format(self.file_save))
+        
+
+    def load(self):
+        self.states = torch.load("{}/states.pt".format(self.file_save))
+        self.actions_probs = torch.load("{}/actions.pt".format(self.file_save))
+        self.rewards = torch.load("{}/rewards.pt".format(self.file_save))
+        self.terminated = torch.load("{}/dones.pt".format(self.file_save))
+        if self.image_size is not None:
+            self.images = torch.load("{}/images.pt".format(self.file_save))

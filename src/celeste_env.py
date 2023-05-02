@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 import numpy as np
 import tensorflow as tf
 import dxcam
-from cv2 import imwrite
+import cv2
 
 from config import Config
 
@@ -19,6 +19,9 @@ class CelesteEnv():
 
         # Create config
         self.config = config
+
+        # True if the environnement is testing, else it is training
+        self.is_testing = True
 
         # Init max step at config value
         self.max_steps = self.config.max_steps
@@ -71,8 +74,12 @@ class CelesteEnv():
         self.action_mode = "Continuous"
 
         # Object initiate for screen shot
-        if config.use_image:
-            self.camera = dxcam.create()
+        if config.use_image or config.video_best_screen:
+            self.camera = dxcam.create(output_idx=0, output_color="BGR")
+
+        # Object initiate for create video during test
+        if config.video_best_screen:
+            self.screens = dict()
 
     def set_action_mode(self, action_mode):
         self.action_mode = action_mode
@@ -185,6 +192,9 @@ class CelesteEnv():
 
             screen_obs = np.array(self.screen_obs[np.newaxis, ...])
 
+        if self.is_testing and self.config.video_best_screen:
+            self.screen_image()
+
         truncated = False
         if self.current_step == self.max_steps and not terminated:
             truncated = True
@@ -208,18 +218,26 @@ class CelesteEnv():
             tuple: New state, reward
         """
 
+        self.is_testing = test
+
+        if self.config.video_best_screen and self.is_testing:
+            self.screens.clear()
+
         # Init the screen by choosing randomly in the screen used if not testing
-        if not test:
-            self.screen_info = self.config.screen_info[np.random.choice(self.config.screen_used)]
+        if not self.is_testing:
+            self.screen_info = self.config.screen_info[np.random.choice(self.config.screen_used, p=self.config.prob_screen_used)]
         # If testing and checking all the screen, start with the first screen
         elif not self.config.one_screen:
-            self.screen_info = self.config.screen_info[0]
+            self.screen_info = self.config.screen_info[self.config.screen_used[0]]
 
         # Init the current tas file
-        if not test:
-            self.current_tas_file = self.screen_info.get_random_start()
-        else:
+        if self.is_testing:
             self.current_tas_file = self.screen_info.get_true_start()
+        elif self.config.start_pos_only:
+            self.current_tas_file = self.screen_info.get_true_start()
+        else:
+            self.current_tas_file = self.screen_info.get_random_start()
+
 
         # Init the current step
         self.current_step = 0
@@ -337,7 +355,7 @@ class CelesteEnv():
         self.screen_info = self.config.screen_info[self.screen_info.screen_value + 1]
 
         # Add the necessary step to the next screen
-        self.max_steps += self.config.max_steps
+        self.max_steps += self.current_step
 
         # If the goal coords are given, put it in the observation vector
         if self.config.give_goal_coords:
@@ -359,6 +377,18 @@ class CelesteEnv():
         """
         # Do not know if I will need it anytime
 
+    def screen_image(self):
+        """Screen the current image of the game
+        """
+        # Capture the current image
+        screen = self.camera.grab(region=self.config.region)
+
+        while screen is None:
+            time.sleep(0.05)
+            screen = self.camera.grab(region=self.config.region)
+
+        # Add the screen
+        self.screens[self.game_step] = screen
 
     def get_image_game(self, normalize:bool=True):
         """Get a np array of the current screen
@@ -371,12 +401,12 @@ class CelesteEnv():
         """
         # Coordonates correspond to the celeste window when place on the automatic render left size on windows
         # So region is for me, you have to put the pixels square of your Celeste Game
-        frame = self.camera.grab(region=(1,266,959,804))
+        frame = self.camera.grab(region=self.config.region)
 
         # Sometimes the frame is None because it need more time to refresh, so wait..
         while frame is None:
             time.sleep(0.05)
-            frame = self.camera.grab(region=(1,266,959,804))
+            frame = self.camera.grab(region=self.config.region)
 
         # I am not sure exactly but it is not RGB but RBG or something like that so you have to invert two columns
         # It is not really usefull for the IA, only if you want to save the screen
@@ -560,6 +590,35 @@ class CelesteEnv():
         # Else reward is natural reward
         return self.config.natural_reward * np.square(self.screen_info.distance_goal(self.pos_x, self.pos_y) / 0.7)
 
+    def save_video(self):
+        """Save the saved video of this episode
+        """
+
+        # Write the images in the file
+        all_frames = list(self.screens)
+        last_frame = all_frames[-1]
+        current_frame_index = 0
+
+        # Configuration
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        fps = self.config.fps
+        size = (self.screens[last_frame].shape[1], self.screens[last_frame].shape[0])
+
+        # Object creation VideoWriter
+        out = cv2.VideoWriter("result.mp4", fourcc, fps, size)
+
+
+        for frame in range(last_frame+1):
+            current_frame = all_frames[current_frame_index]
+            out.write(self.screens[current_frame])
+
+            if frame > current_frame:
+                current_frame_index += 1
+
+
+        # Close the file
+        out.release()
+
     def controls_before_start(self):
         """Controls before the start of the test: 
         - Make sure that the init tas file work
@@ -572,7 +631,7 @@ class CelesteEnv():
         # Save the image
         if self.config.use_image:
             screen = self.get_image_game(normalize=False)[0]
-            imwrite('screen.png', np.rollaxis(screen, 0, 3))
+            cv2.imwrite('screen.png', np.rollaxis(screen, 0, 3))
 
             # If the image shape is not the same as the one in config
             if screen.shape[0] != self.config.size_image[0] or screen.shape[1] != self.config.size_image[1]:

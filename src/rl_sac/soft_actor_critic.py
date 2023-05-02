@@ -30,7 +30,7 @@ class SoftActorCritic():
         self.batch_size = self.config.batch_size
         self.epoch = self.config.epoch
 
-        self.memory = ReplayBuffer(size=self.config.size_buffer, action_size=self.action_size, state_size=self.state_size, image_size=self.size_image, size_histo=self.size_histo)
+        self.memory = ReplayBuffer(self.config.size_buffer, self.action_size, self.state_size, self.size_image, self.size_histo, self.config.file_save_memory)
         self.actor = ActorNetwork(self.state_size, self.action_size, self.size_image, self.size_histo, self.config)
         self.critic_1 = CriticNetwork(self.state_size, self.action_size, self.size_image, self.size_histo, self.config, name="critic_1")
         self.critic_2 = CriticNetwork(self.state_size, self.action_size, self.size_image, self.size_histo, self.config, name="critic_2")
@@ -40,8 +40,12 @@ class SoftActorCritic():
         self.alpha = self.config.alpha
         self.update_target_network(init=True)
 
-        if self.config.restore:
+        if self.config.restore_networks:
             self.load_model()
+
+        self.has_save_memory = True
+        if self.config.restore_memory:
+            self.load_memory()
 
         self.save_model()
 
@@ -143,6 +147,12 @@ class SoftActorCritic():
         self.critic_2.load_model()
         self.value.load_model()
         self.target_value.load_model()
+
+    def save_memory(self):
+        self.memory.save()
+
+    def load_memory(self):
+        self.memory.load()
 
 
 
