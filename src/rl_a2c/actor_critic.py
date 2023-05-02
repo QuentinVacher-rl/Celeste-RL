@@ -104,7 +104,7 @@ class ActorCritic(nn.Module):
         return x_actor, x_critic
 
 
-    def choose_action(self,state, available_actions):
+    def choose_action(self,state, image):
 
         # Formate state
         action_logit, value = self(state)

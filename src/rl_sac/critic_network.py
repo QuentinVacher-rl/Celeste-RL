@@ -12,7 +12,7 @@ class CriticNetwork(nn.Module):
     def __init__(self, state_size, action_size, size_image, histo_size, config: ConfigSac, name="critic"):
         super(CriticNetwork, self).__init__()
 
-        self.save_file = config.file_save + "/" + name + ".pt"
+        self.save_file = config.file_save_network + "/" + name + ".pt"
 
         self.state_size = state_size
         self.action_size = action_size

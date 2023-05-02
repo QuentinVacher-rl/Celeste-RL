@@ -12,7 +12,7 @@ class ValueNetwork(nn.Module):
     def __init__(self, state_size, size_image, histo_size, config: ConfigSac, name="value"):
         super(ValueNetwork, self).__init__()
 
-        self.save_file = config.file_save + "/" + name + ".pt"
+        self.save_file = config.file_save_network + "/" + name + ".pt"
         self.state_size = state_size
         self.size_image = size_image
         self.hidden_size_1 = config.hidden_size
