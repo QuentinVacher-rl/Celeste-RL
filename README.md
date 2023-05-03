@@ -3,7 +3,7 @@
 Celeste is a fantastic game that I've spent hours playing. Last year, I discovered Reinforcement Learning (RL) for work-related purposes, and the idea of creating an AI capable of playing Celeste using RL came to my mind in early February 2023.
 
 Here is a good attemp of the AI on the three first screens : 
-(It is obviously quicker than the vanilla game because I emulatable it)
+(It is obviously quicker than the vanilla game because I emulate it)
 
 ![Result](images/result.gif) 
 
