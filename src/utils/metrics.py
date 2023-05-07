@@ -25,7 +25,9 @@ class Metrics:
         }
 
         # Best reward ever getten on test
-        self.best_reward = -1 * np.inf
+        self.best_scren = 0
+        self.best_run = 0
+
 
         # list to store all the testing rewards gotten
         self.all_reward = list()
@@ -40,7 +42,8 @@ class Metrics:
         self.init_time = time.time()
 
         # Quantity of step passed
-        self.nb_total_step = 0
+        self.nb_total_test_step = 0
+        self.nb_total_train_step = 0
 
         # Counter for restore model
         self.counter_restore = 0
@@ -48,20 +51,21 @@ class Metrics:
         # Number terminated for train part
         self.nb_terminated_train = 0
 
-    def insert_metrics(self, learning_step: int, reward: list(), episode: int):
+    def insert_metrics(self, learning_step: int, reward: list(), episode: int, max_steps_ep: int, last_step):
         """Insert metrics given
 
         Args:
             learning_step (int): step of the learning
             reward (list): list of rewards of the episode
             episode (int): current episode
+            max_steps_ep (int): Max step of this episode (can variate with multiple screens)
 
         Returns:
             bool: True if there is a new max reward, else False
         """
 
-        # Actualise the total number of steps
-        self.nb_total_step += len(reward)
+        # Actualise the total number of test steps
+        self.nb_total_test_step += len(reward)
 
         # Get the mean of the reward
         mean_reward = np.sum(reward)
@@ -71,7 +75,7 @@ class Metrics:
 
 
         # Check death
-        if reward[-1] == self.config.reward_death and len(reward) < self.config.max_steps:
+        if reward[-1] == self.config.reward_death and len(reward) < max_steps_ep:
             self.info_level["Death"][-1] += 1
 
         # Else check level passed
@@ -92,9 +96,20 @@ class Metrics:
         restore = False
 
 
-        if mean_reward > self.best_reward:
-            self.best_reward = mean_reward
+        nb_screen_passed = 0
+        reward_unique, count = np.unique(reward, return_counts=True)
+        if self.config.reward_screen_passed in reward_unique:
+            nb_screen_passed = count[np.where(reward_unique == self.config.reward_screen_passed)][0]
+
+        if nb_screen_passed > self.best_scren:
+            self.best_scren = nb_screen_passed
+            self.best_run = last_step
             new_best_reward = True
+
+        elif nb_screen_passed == self.best_scren:
+            if self.best_run > last_step:
+                self.best_run = last_step
+                new_best_reward = True
 
 
         # Only print graph is the episode is multiple of value to print
@@ -131,28 +146,33 @@ class Metrics:
 
         return new_max_reward, new_best_reward, restore
 
-    def print_train_step(self, step, episode: int, reward):
+    def print_train_step(self, step, episode: int, reward: list):
         """Print the metrics infos at the current learning step
 
         Args:
             step (int): step of the learning
             episode (int): current episode
+            reward (list): list of reward of episode
         """
         if episode == 0:
             self.train_reward.clear()
 
-        if reward == self.config.reward_screen_passed:
+        if reward[-1] == self.config.reward_screen_passed:
             self.nb_terminated_train += 1
+
+        # Actualise the total number of train steps
+        self.nb_total_train_step += len(reward)
 
         # Get time
         time_spend = time.strftime("%H:%M:%S", time.gmtime(np.round(time.time() - self.init_time)))
 
         # Print the graph
-        print("Time : {}, Learning step : {}/{}, episode {}/{}, nb finished {}/{}   ".format(
+        print("Time : {} --- Learning step : {}/{} --- episode {}/{} --- nb finished {}/{} --- Total train step {}  ".format(
             time_spend,
             step, self.config.nb_learning_step,
             episode, self.config.nb_train_episode,
-            self.nb_terminated_train, episode
+            self.nb_terminated_train, episode,
+            self.nb_total_train_step
         ), end="\r")
 
 
@@ -171,14 +191,14 @@ class Metrics:
         end = "\n" if episode % self.config.nb_test_episode == 0 else "\r"
 
         # Print the graph
-        print("Time : {}, Learning step : {}/{}, episode {}/{}, mean reward {}, reward ep {}, max mean reward {}, nb step {}, Nb train win {}   ".format(
+        print("Time : {} --- Learning step : {}/{} --- episode {}/{}, mean reward {} --- reward ep {} --- max mean reward {} --- quickest {} --- Nb train win {}   ".format(
             time_spend,
             step, self.config.nb_learning_step,
             episode, self.config.nb_test_episode,
             np.round(np.mean(self.all_reward[-episode:]), 2),
             np.round(self.all_reward[-1], 2),
             np.round(self.max_mean_reward, 2),
-            self.nb_total_step,
+            self.best_run,
             self.nb_terminated_train
         ), end=end)
 

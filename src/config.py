@@ -19,6 +19,9 @@ class Config:
         # Total number of episode
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+        # If you want to test right away (if networks are restored or pretrained)
+        self.start_with_test = False
+
         self.nb_learning_step = 10_000
 
         # Max step per episode
@@ -29,6 +32,9 @@ class Config:
 
         # Test episode per learning step
         self.nb_test_episode = 5
+
+        # True if the image is used for learning
+        self.use_image = False
 
         # True if you want a video for the best test
         self.video_best_screen = True
@@ -46,9 +52,9 @@ class Config:
         # Number of frames per action
         self.nb_frame_action = 5
 
-        self.screen_used = [0, 1, 2, 3]
+        self.screen_used = [0, 1, 2, 3, 4]
 
-        self.prob_screen_used = np.array([1, 1, 1, 3])
+        self.prob_screen_used = np.array([5, 4, 3, 2, 1])
         self.prob_screen_used = self.prob_screen_used / np.sum(self.prob_screen_used)
         
         self.max_screen_value = max(self.screen_used)
@@ -103,13 +109,24 @@ class Config:
             ScreenInfo(
                 screen_id="3b",
                 screen_value=4,
-                start_position = [[928, -568], [1059, -568], [1110, -584], [1120, -672], [1035, -688]],
+                start_position = [[928, -568], [990, -584], [1059, -568], [1110, -584], [1120, -672], [1035, -688]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=1180, x_min=880,
                 y_max=-540, y_min=-735,
                 goal=[[ 1075, 1052], [-735, -735]],
                 next_screen_id = "5"
+            ),
+            ScreenInfo(
+                screen_id="5",
+                screen_value=5,
+                start_position = [[1065, -752], [1140, -762], [1140, -880], [1230, -872], [1230, -872], [1320, -900]],
+                first_frame=58,
+                tas_file=self.init_tas_file,
+                x_max=1340, x_min=1020,
+                y_max=-700, y_min=-1020,
+                goal=[[ 1310, 1325], [-1020, -1020]],
+                next_screen_id = "6"
             )
         ]
 
@@ -164,6 +181,7 @@ class Config:
 
         # Quantity of former iteration state and action (if action given) put if the observation vector
         self.histo_obs = 8
+        self.histo_image = 2
 
         # Calculate the real size of observation
         self.observation_size = (self.histo_obs + 1) * self.base_observation_size
@@ -193,10 +211,7 @@ class Config:
         self.reward_wrong_screen_passed = 0
 
         # Reward when nothing append
-        self.natural_reward = -1
-
-        # True if the image is used for learning
-        self.use_image = False
+        self.natural_reward = -0.5
 
         # True will set done if screen is based, False only when last screen is passed
         self.one_screen = False

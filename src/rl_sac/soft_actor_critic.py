@@ -1,3 +1,4 @@
+
 from rl_sac.replay_buffer import ReplayBuffer
 from rl_sac.actor_network import ActorNetwork
 from rl_sac.critic_network import CriticNetwork
@@ -18,11 +19,11 @@ class SoftActorCritic():
         self.action_mode = "Continuous"
 
         self.config = config_sac
-        self.size_histo = config_env.histo_obs
+        self.size_histo = config_env.histo_image
         self.action_size = config_env.action_size.shape[0]
         self.state_size = config_env.observation_size
 
-        self.size_image = config_env.size_image if config_env.use_image else None
+        self.size_image = config_env.size_image if self.config.use_image_train else None
         self.use_image = config_env.use_image
 
         self.discount_factor = self.config.discount_factor
@@ -30,7 +31,7 @@ class SoftActorCritic():
         self.batch_size = self.config.batch_size
         self.epoch = self.config.epoch
 
-        self.memory = ReplayBuffer(self.config.size_buffer, self.action_size, self.state_size, self.size_image, self.size_histo, self.config.file_save_memory)
+        self.memory = ReplayBuffer(self.config.size_buffer, self.action_size, self.state_size, self.size_image, self.size_histo)
         self.actor = ActorNetwork(self.state_size, self.action_size, self.size_image, self.size_histo, self.config)
         self.critic_1 = CriticNetwork(self.state_size, self.action_size, self.size_image, self.size_histo, self.config, name="critic_1")
         self.critic_2 = CriticNetwork(self.state_size, self.action_size, self.size_image, self.size_histo, self.config, name="critic_2")
@@ -44,10 +45,33 @@ class SoftActorCritic():
             self.load_model()
 
         self.has_save_memory = True
-        if self.config.restore_memory:
-            self.load_memory()
+        if self.config.activate_supervised_learning_init:
+            size_memory = self.config.size_supervised_buffer
+            size_image = config_env.size_image if self.config.use_image_supervised_buffer else None
+            supervised_memory = ReplayBuffer(size_memory, self.action_size, self.state_size, size_image, self.size_histo)
+            for partition in range(self.config.partition_buffer):
+                supervised_memory.file_save = self.config.file_save_memory + "/memory_" + str(partition)
+                supervised_memory.load()
+                supervised_memory.current_size = self.config.size_supervised_buffer - 1
+                supervised_memory.index = self.config.size_supervised_buffer - 1
 
-        self.save_model()
+                for index in range(self.config.nb_epochs_supervised_per_partitions):
+                    print("Partition : {}/{} -- Supervised training : {}/{}".format(
+                        partition+1, self.config.partition_buffer,
+                        index+1, self.config.nb_epochs_supervised_per_partitions
+                    ), end=("\r" if index+1 < self.config.nb_epochs_supervised_per_partitions else "\n"))
+                    self.train(memory=supervised_memory, batch_size=self.config.supervised_batch_size)
+
+            self.save_model()
+
+        if self.config.save_supervised_buffer:
+            size_memory = self.config.size_supervised_buffer
+            size_image = config_env.size_image if self.config.use_image_supervised_buffer else None
+            file_save_memory = self.config.file_save_memory + "/memory_0"
+            self.index_memory = 0
+            self.supervised_memory = ReplayBuffer(size_memory, self.action_size, self.state_size, size_image, self.size_histo, file_save_memory)
+
+
 
     def update_target_network(self, init=False):
         tau = 1 if init else self.tau
@@ -62,6 +86,14 @@ class SoftActorCritic():
 
     def insert_data(self, state, new_state, image, new_image, actions_probs, reward, done, j):
         self.memory.insert_data(state, new_state, image, new_image, actions_probs, reward, done)
+        if self.config.save_supervised_buffer:
+            self.supervised_memory.insert_data(state, new_state, image, new_image, actions_probs, reward, done)
+            if self.supervised_memory.index + 1 == self.supervised_memory.size:
+                self.supervised_memory.save()
+                self.supervised_memory.reset()
+                self.index_memory = (self.index_memory + 1) % self.config.partition_buffer
+                self.supervised_memory.file_save = self.supervised_memory.file_save[:-1] + str(self.index_memory)
+
 
     def choose_action(self, state, image):
         state = torch.tensor(state, dtype=torch.float).to(self.actor.device)
@@ -85,14 +117,23 @@ class SoftActorCritic():
         return action, log_probs.view(-1)
 
 
-    def train(self):
+    def train(self, memory:ReplayBuffer = None, batch_size:int = None):
 
-        if self.memory.index < self.batch_size:
+        if memory is None:
+            memory = self.memory
+
+        if batch_size is None:
+            batch_size = self.batch_size
+
+        if memory.current_size < self.batch_size:
+            return
+
+        if self.memory.index % self.config.frequency_training != 0:
             return
 
         for _ in range(self.epoch):
 
-            state, new_state, image, new_image, actions, reward, terminated = self.memory.sample_data(self.batch_size)
+            state, new_state, image, new_image, actions, reward, terminated = memory.sample_data(batch_size)
 
             value = self.value(state, image).view(-1)
             next_value = self.target_value(new_state, new_image).view(-1)
@@ -148,11 +189,6 @@ class SoftActorCritic():
         self.value.load_model()
         self.target_value.load_model()
 
-    def save_memory(self):
-        self.memory.save()
-
-    def load_memory(self):
-        self.memory.load()
 
 
 

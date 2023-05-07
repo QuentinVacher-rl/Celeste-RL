@@ -2,6 +2,7 @@
 """
 
 import absl.logging
+import torch
 
 from celeste_env import CelesteEnv
 from config import Config
@@ -9,7 +10,6 @@ from config import Config
 import rl_sac
 
 from utils.metrics import Metrics
-import torch
 
 absl.logging.set_verbosity(absl.logging.ERROR)
 
@@ -42,38 +42,40 @@ def main():
 
         # Reset nb terminated
         metrics.nb_terminated_train = 0
-        for episode_train in range(1, config.nb_train_episode + 1):
 
-            # Reset the environnement
-            state, image, terminated, truncated = env.reset()
+        if learning_step > 1 or not config.start_with_test:
+            for episode_train in range(1, config.nb_train_episode + 1):
 
-            ep_reward = list()
+                # Reset the environnement
+                state, image, terminated, truncated = env.reset()
 
-            # For each step
-            while not terminated and not truncated:
+                ep_reward = list()
 
-                # Get the actions
-                actions = algo.choose_action(state, image)
-                #print(actions)
-                # Step the environnement
-                next_state, next_image, reward, terminated, truncated, info = env.step(actions)
+                # For each step
+                while not terminated and not truncated:
 
-                if not info["fail_death"]:
-                    # Insert the data in the algorithm memory
-                    algo.insert_data(state, next_state, image, next_image, actions, reward, terminated, truncated)
+                    # Get the actions
+                    actions = algo.choose_action(state, image)
+                    #print(actions)
+                    # Step the environnement
+                    next_state, next_image, reward, terminated, truncated, info = env.step(actions)
 
-                    # Actualise state
-                    state = next_state
-                    image = next_image
+                    if not info["fail_death"]:
+                        # Insert the data in the algorithm memory
+                        algo.insert_data(state, next_state, image, next_image, actions, reward, terminated, truncated)
 
-                    # Train the algorithm
-                    algo.train()
+                        # Actualise state
+                        state = next_state
+                        image = next_image
 
-                    ep_reward.append(reward)
-                else:
-                    truncated=True
+                        # Train the algorithm
+                        algo.train()
 
-            metrics.print_train_step(learning_step, episode_train, reward)
+                        ep_reward.append(reward)
+                    else:
+                        truncated=True
+
+                metrics.print_train_step(learning_step, episode_train, ep_reward)
 
         for episode_test in range(1, config.nb_test_episode + 1):
 
@@ -107,26 +109,23 @@ def main():
 
             if not fail_death:
                 # Insert the metrics
-                save_model, save_video, restore = metrics.insert_metrics(learning_step, reward_ep, episode_test)
+                save_model, save_video, restore = metrics.insert_metrics(learning_step, reward_ep, episode_test, env.max_steps, env.game_step)
 
                 # Print the information about the episode
                 metrics.print_test_step(learning_step, episode_test)
 
 
                 if save_video:
+                    print("save")
                     env.save_video()
             else:
                 episode_test -= 1
-
-        if algo.has_save_memory:
-            algo.save_memory()
 
         # Save the model (will be True only if new max reward)
         if save_model:
             algo.save_model()
 
         if restore:
-            print("restore")
             algo.load_model()
 
 

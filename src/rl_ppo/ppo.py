@@ -35,7 +35,7 @@ class PPO(nn.Module):
 
         self.nb_epochs = self.config.nb_epochs
 
-        self.size_histo = config_env.histo_obs
+        self.size_histo = config_env.histo_image
         self.state_size = config_env.observation_size
         self.action_size = config_env.action_size.shape[0]
         self.use_image = config_env.use_image

@@ -35,7 +35,7 @@ class CelesteEnv():
 
         # Observation vector
         self.observation = np.zeros(self.observation_size)
-        self.screen_obs = np.zeros(((self.config.histo_obs+1)*self.config.size_image[0], self.config.size_image[1], self.config.size_image[2]))
+        self.screen_obs = np.zeros(((self.config.histo_image+1)*self.config.size_image[0], self.config.size_image[1], self.config.size_image[2]))
 
         # Index to start the information of position, speed and stamina (decay of 4 if the goal coords are given)
         self.index_start_obs = 0
@@ -340,7 +340,7 @@ class CelesteEnv():
             screen_obs = self.get_image_game()
 
             # Duplicate to match historic size
-            for index in range(self.config.histo_obs+1):
+            for index in range(self.config.histo_image+1):
                 self.screen_obs[index*3:(index+1)*3] = screen_obs
 
             screen_obs = np.array(self.screen_obs[np.newaxis, ...])
@@ -465,7 +465,7 @@ class CelesteEnv():
             text_row = BeautifulSoup(response.content, "html.parser").text
             l_text = text_row.split("\n")
 
-            # Normally Timer appear on -8 index, but sometimes there is a "Cursor" info that can crash the code
+            # Normally Timer appear on -8 index, but sometimes there is the "Cursor" info that can crash the code
             # If "Timer" is not on -8 index, we just check all the index
             if len(l_text) > 8 and "Timer" in l_text[-8]:
                 # Get game step
@@ -588,7 +588,7 @@ class CelesteEnv():
             return self.config.reward_wrong_screen_passed
 
         # Else reward is natural reward
-        return self.config.natural_reward * np.square(self.screen_info.distance_goal(self.pos_x, self.pos_y) / 0.7)
+        return self.config.natural_reward * np.square(self.screen_info.distance_goal(self.pos_x, self.pos_y) / 0.7) - 0.5
 
     def save_video(self):
         """Save the saved video of this episode
@@ -639,7 +639,7 @@ class CelesteEnv():
                 # Change i if allowed
                 if self.config.allow_change_size_image:
                     self.config.size_image = np.array(screen.shape)
-                    self.screen_obs = np.zeros(((self.config.histo_obs+1)*self.config.size_image[0], self.config.size_image[1], self.config.size_image[2]))
+                    self.screen_obs = np.zeros(((self.config.histo_image+1)*self.config.size_image[0], self.config.size_image[1], self.config.size_image[2]))
 
                 # Else raise error
                 else:
