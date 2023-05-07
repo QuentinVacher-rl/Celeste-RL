@@ -2,8 +2,8 @@
 
 Celeste is a fantastic game that I've spent hours playing. Last year, I discovered Reinforcement Learning (RL) for work-related purposes, and the idea of creating an AI capable of playing Celeste using RL came to my mind in early February 2023.
 
-Here is a good attemp of the AI on the three first screens : 
-(It is obviously quicker than the vanilla game because I emulatable it)
+Here is a good attemp of the AI on the five first screens : 
+(It is obviously quicker than the vanilla game because I emulate it)
 
 ![Result](images/result.gif) 
 
@@ -90,6 +90,14 @@ I have tested various possibilities for the reward, and one approach has given g
 ## Implemented Algorithms:
 
 For this project, I've had the opportunity to implement and test several algorithms, including Deep Q-Learning, A2C, PPO, and SAC. Each of these algorithms has had its strengths and weaknesses in dealing with the environment and learning the game effectively. Currently, SAC is yielding the best results.
+
+Deep Q-Learning : [Paper](https://arxiv.org/abs/1509.06461)
+
+A2C : [Paper](https://arxiv.org/abs/1602.01783)
+
+PPO : [Paper](https://arxiv.org/abs/1707.06347)
+
+SAC : [Paper](https://arxiv.org/abs/1801.01290)
 
 ## Results:
 
