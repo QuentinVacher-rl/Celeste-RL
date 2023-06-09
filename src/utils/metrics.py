@@ -177,7 +177,7 @@ class Metrics:
             step, self.config.nb_learning_step,
             episode, self.config.nb_train_episode,
             self.nb_terminated_train, episode,
-            self.nb_total_train_step
+            self.nb_total_train_step,
             np.round(self.config.prob_screen_used,2)
         ), end="\r")
 
