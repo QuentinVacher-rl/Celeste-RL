@@ -49,20 +49,23 @@ class SoftActorCritic():
             size_memory = self.config.size_supervised_buffer
             size_image = config_env.size_image if self.config.use_image_supervised_buffer else None
             supervised_memory = ReplayBuffer(size_memory, self.action_size, self.state_size, size_image, self.size_histo)
-            for partition in range(self.config.partition_buffer):
+            for partition in range(20, self.config.partition_buffer):
                 supervised_memory.file_save = self.config.file_save_memory + "/memory_" + str(partition)
+                print("Loading buffer                    ", end="\r")
                 supervised_memory.load()
                 supervised_memory.current_size = self.config.size_supervised_buffer - 1
                 supervised_memory.index = self.config.size_supervised_buffer - 1
 
                 for index in range(self.config.nb_epochs_supervised_per_partitions):
-                    print("Partition : {}/{} -- Supervised training : {}/{}".format(
+                    print("Partition : {}/{} -- Supervised training : {}/{}              ".format(
                         partition+1, self.config.partition_buffer,
                         index+1, self.config.nb_epochs_supervised_per_partitions
                     ), end=("\r" if index+1 < self.config.nb_epochs_supervised_per_partitions else "\n"))
                     self.train(memory=supervised_memory, batch_size=self.config.supervised_batch_size)
 
-            self.save_model()
+                print("End partition            ", end="\r")
+
+                self.save_model()
 
         if self.config.save_supervised_buffer:
             size_memory = self.config.size_supervised_buffer
@@ -84,15 +87,15 @@ class SoftActorCritic():
 
         self.target_value.load_state_dict(param_value)
 
-    def insert_data(self, state, new_state, image, new_image, actions_probs, reward, done, j):
-        self.memory.insert_data(state, new_state, image, new_image, actions_probs, reward, done)
+    def insert_data(self, state, new_state, image, new_image, actions_probs, reward, terminated, truncated):
+        self.memory.insert_data(state, new_state, image, new_image, actions_probs, reward, terminated)
         if self.config.save_supervised_buffer:
-            self.supervised_memory.insert_data(state, new_state, image, new_image, actions_probs, reward, done)
+            self.supervised_memory.insert_data(state, new_state, image, new_image, actions_probs, reward, terminated)
             if self.supervised_memory.index + 1 == self.supervised_memory.size:
                 self.supervised_memory.save()
                 self.supervised_memory.reset()
                 self.index_memory = (self.index_memory + 1) % self.config.partition_buffer
-                self.supervised_memory.file_save = self.supervised_memory.file_save[:-1] + str(self.index_memory)
+                self.supervised_memory.file_save = self.supervised_memory.file_save[:-len(str(self.index_memory))] + str(self.index_memory)
 
 
     def choose_action(self, state, image):

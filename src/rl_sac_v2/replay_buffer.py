@@ -16,7 +16,7 @@ class ReplayBuffer:
         self.states = torch.zeros((size+1, state_size), device=self.device)
         self.actions_probs = torch.zeros((size, action_size), device=self.device)
         self.rewards = torch.zeros((size, 1), device=self.device)
-        self.terminated = torch.zeros((size, 1), dtype=torch.bool, device=self.device)
+        self.terminated = torch.zeros((size, 1), dtype=torch.int, device=self.device)
         if self.image_size is not None:
             self.images = torch.zeros((size+1, (size_histo+1)*image_size[0], image_size[1], image_size[2]), device=self.image_device, dtype=torch.float16)
 

@@ -92,7 +92,7 @@ class Metrics:
         # Init the new max reward and new best to False
         new_max_reward = False
         new_best_reward = False
-
+        next_screen = False
         restore = False
 
 
@@ -140,13 +140,18 @@ class Metrics:
                 # Print the graphs
                 self.print_result(reshape_rewards)
 
+            if self.info_level["Level passed"][-1] > 4:
+                next_screen = True
+
+
             # Add a new step to the info level
             for value in self.info_level.values():
                 value.append(0)
 
-        return new_max_reward, new_best_reward, restore
 
-    def print_train_step(self, step, episode: int, reward: list):
+        return new_max_reward, new_best_reward, restore, next_screen
+
+    def print_train_step(self, step, episode: int, reward: list, entropy):
         """Print the metrics infos at the current learning step
 
         Args:
@@ -167,12 +172,14 @@ class Metrics:
         time_spend = time.strftime("%H:%M:%S", time.gmtime(np.round(time.time() - self.init_time)))
 
         # Print the graph
-        print("Time : {} --- Learning step : {}/{} --- episode {}/{} --- nb finished {}/{} --- Total train step {}  ".format(
+        print("Time : {} --- Learning step : {}/{} --- episode {}/{} --- nb finished {}/{} --- Total train step {} --- prob_screens {}".format(
             time_spend,
             step, self.config.nb_learning_step,
             episode, self.config.nb_train_episode,
             self.nb_terminated_train, episode,
-            self.nb_total_train_step
+            self.nb_total_train_step,
+            entropy,
+            np.round(self.config.prob_screen_used,2)
         ), end="\r")
 
 
@@ -191,7 +198,7 @@ class Metrics:
         end = "\n" if episode % self.config.nb_test_episode == 0 else "\r"
 
         # Print the graph
-        print("Time : {} --- Learning step : {}/{} --- episode {}/{}, mean reward {} --- reward ep {} --- max mean reward {} --- quickest {} --- Nb train win {}   ".format(
+        print("Time : {} --- Learning step : {}/{} --- episode {}/{}, mean reward {} --- reward ep {} --- max mean reward {} --- quickest {} --- Nb train win {} ".format(
             time_spend,
             step, self.config.nb_learning_step,
             episode, self.config.nb_test_episode,

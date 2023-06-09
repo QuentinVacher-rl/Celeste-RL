@@ -26,14 +26,12 @@ class ValueNetwork(nn.Module):
                 nn.MaxPool2d(kernel_size=2, stride=2),
                 nn.Conv2d(64, 64, kernel_size=3, padding=0),
                 nn.MaxPool2d(kernel_size=2, stride=2),
-                nn.Conv2d(64, 64, kernel_size=3, padding=0),
-                nn.MaxPool2d(kernel_size=2, stride=2),
-                nn.Conv2d(64, 16, kernel_size=3, padding=0),
+                nn.Conv2d(64, 32, kernel_size=3, padding=0),
                 nn.MaxPool2d(kernel_size=2, stride=2),
                 nn.Flatten()
             )
              # Divide and minus three times by 2 because maxpooling, multiply by 16 with 16 output filter
-            size_output_image = int(16 * np.prod(np.trunc(np.trunc(np.trunc(np.trunc((self.size_image[1:3] - 2)/2-2)/2-2)/2-2)/2)))
+            size_output_image = int(32 * np.prod(np.trunc(np.trunc(np.trunc((self.size_image[1:3] - 2)/2-2)/2-2)/2)))
         else:
             size_output_image = 0
 

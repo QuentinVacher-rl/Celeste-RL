@@ -31,10 +31,10 @@ class Config:
         self.nb_train_episode = 100
 
         # Test episode per learning step
-        self.nb_test_episode = 5
+        self.nb_test_episode = 10
 
         # True if the image is used for learning
-        self.use_image = False
+        self.use_image = True
 
         # True if you want a video for the best test
         self.video_best_screen = True
@@ -52,12 +52,13 @@ class Config:
         # Number of frames per action
         self.nb_frame_action = 5
 
-        self.screen_used = [0, 1, 2, 3, 4]
+        self.screen_used = [0]
 
-        self.prob_screen_used = np.array([5, 4, 3, 2, 1])
+        self.prob_screen_used = np.array([1])
         self.prob_screen_used = self.prob_screen_used / np.sum(self.prob_screen_used)
         
-        self.max_screen_value = max(self.screen_used)
+        self.max_screen_value = 7
+        self.max_screen_value_test = 0
         # Tas file to run for init the first screen
         self.init_tas_file = "console load 1 {}\n   38\n\n# end\n   1"
 
@@ -65,7 +66,7 @@ class Config:
             ScreenInfo(
                 screen_id="1",
                 screen_value=0,
-                start_position = [[19, 144], [90, 128], [160, 80],  [260, 56]],
+                start_position = [[19, 144], [19, 144], [19, 144], [90, 128], [160, 80],  [260, 56]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=308, x_min=12,
@@ -98,7 +99,7 @@ class Config:
             ScreenInfo(
                 screen_id="4",
                 screen_value=3,
-                start_position = [[776, -392], [823, -480], [860, -475], [932, -480], [780, -450], [920, -520]],
+                start_position = [[776, -392], [823, -480],[823, -480], [860, -475], [932, -480], [780, -450], [920, -520]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=1050, x_min=750,
@@ -109,7 +110,7 @@ class Config:
             ScreenInfo(
                 screen_id="3b",
                 screen_value=4,
-                start_position = [[928, -568], [990, -584], [1059, -568], [1110, -584], [1120, -672], [1035, -688]],
+                start_position = [[928, -568], [990, -584], [1110, -584], [1120, -672], [1035, -688],[1084, -680],[1028,-640]],
                 first_frame=58,
                 tas_file=self.init_tas_file,
                 x_max=1180, x_min=880,
@@ -127,6 +128,39 @@ class Config:
                 y_max=-700, y_min=-1020,
                 goal=[[ 1310, 1325], [-1020, -1020]],
                 next_screen_id = "6"
+               ),
+            ScreenInfo(
+                screen_id="6",
+                screen_value=6,
+                start_position = [[1320, -1040], [1320, -1120], [1326, -1160], [1400, -1180], [1440, -1150], [1520, -1072], [1580, -1120]],
+                first_frame=58,
+                tas_file=self.init_tas_file,
+                x_max=1620, x_min=1290,
+                y_max=-1000, y_min=-1230,
+                goal=[[ 1620, 1620], [-1128, -1220]],
+                next_screen_id = "6a"
+            ),
+            ScreenInfo(
+                screen_id="6a",
+                screen_value=7,
+                start_position = [[1624, -1128], [1643, -1080], [1700, -1040], [1732, -1125], [1833, -1136]],
+                first_frame=58,
+                tas_file=self.init_tas_file,
+                x_max=2010, x_min=1620,
+                y_max=-1000, y_min=-1230,
+                goal=[[ 2010, 2010], [-1128, -1220]],
+                next_screen_id = "6b"
+            ),
+            ScreenInfo(
+                screen_id="6c",
+                screen_value=9,
+                start_position = [[2336, -1304], [1140, -762], [1140, -880], [1230, -872], [1230, -872], [1320, -900]],
+                first_frame=58,
+                tas_file=self.init_tas_file,
+                x_max=2612, x_min=2330,
+                y_max=-1260, y_min=-1450,
+                goal=[[ 2596, 2612], [-1450, -1450]],
+                next_screen_id = "7"
             )
         ]
 
@@ -138,12 +172,12 @@ class Config:
         self.path_tas_file = "C:\\Code python\\Celeste\\file.tas"
 
         # Reduction factor of image screen
-        self.reduction_factor = 10
+        self.reduction_factor = 8
 
         # True to indicate that size image could be wrong
         self.allow_change_size_image = True
         # Size of the screenshoted image after pooling
-        self.size_image = np.array([3, 54, 96])
+        self.size_image = np.array([3, 68, 120])
 
         # -------------------------------------------
 
@@ -173,14 +207,14 @@ class Config:
         # DashCD : 10
 
         # True if the action are given in the observation
-        self.give_former_actions = False
+        self.give_former_actions = True
 
         # If True, the base size of observation is bigger
         if self.give_former_actions:
             self.base_observation_size = self.base_observation_size + len(self.action_size)
 
         # Quantity of former iteration state and action (if action given) put if the observation vector
-        self.histo_obs = 8
+        self.histo_obs = 10
         self.histo_image = 2
 
         # Calculate the real size of observation
@@ -201,7 +235,7 @@ class Config:
             self.observation_size += 1
 
         # Reward for death
-        self.reward_death = -1
+        self.reward_death = -5
 
 
         # Reward when screen passed
@@ -211,7 +245,7 @@ class Config:
         self.reward_wrong_screen_passed = 0
 
         # Reward when nothing append
-        self.natural_reward = -0.5
+        self.natural_reward = -1
 
         # True will set done if screen is based, False only when last screen is passed
         self.one_screen = False

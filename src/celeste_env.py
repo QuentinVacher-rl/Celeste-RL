@@ -122,7 +122,6 @@ class CelesteEnv():
 
         if actions[2] == 1:
             frame_to_add_l1 += ",X"
-            frame_to_add_l2 += ",X"
             self.is_dashing = True
         else:
             self.is_dashing = False
@@ -169,10 +168,10 @@ class CelesteEnv():
         self.observation[self.index_start_obs:] = np.roll(self.observation[self.index_start_obs:], self.config.base_observation_size, axis=0)
 
         # If the actions are put in the observation vector
-        if self.config.give_former_actions:
+        if observation is not None and self.config.give_former_actions:
 
             # Add them to the observation vector
-            observation[self.config.base_observation_size - len(self.action_size):] = actions / self.action_size
+            observation[self.config.base_observation_size - len(self.action_size):] = actions / (self.action_size-1)
 
         # Now add the current observation
         self.observation[self.index_start_obs:self.config.base_observation_size+self.index_start_obs] = observation
@@ -408,10 +407,6 @@ class CelesteEnv():
             time.sleep(0.05)
             frame = self.camera.grab(region=self.config.region)
 
-        # I am not sure exactly but it is not RGB but RBG or something like that so you have to invert two columns
-        # It is not really usefull for the IA, only if you want to save the screen
-        frame = frame[:, :, ::-1]
-
         # Add a new axis (for the RL model)
         frame = frame[np.newaxis, ...]
 
@@ -423,7 +418,7 @@ class CelesteEnv():
 
         # Normalize the screen
         if normalize:
-            frame = frame / 255
+            frame = np.array(frame / 255, dtype=np.float16)
 
         return frame
 
@@ -556,7 +551,7 @@ class CelesteEnv():
                         done = True
 
                     else:
-                        if self.screen_info.screen_value == self.config.max_screen_value:
+                        if self.screen_info.screen_value == self.config.max_screen_value_test:
                             done = True
 
                         else:
@@ -588,7 +583,7 @@ class CelesteEnv():
             return self.config.reward_wrong_screen_passed
 
         # Else reward is natural reward
-        return self.config.natural_reward * np.square(self.screen_info.distance_goal(self.pos_x, self.pos_y) / 0.7) - 0.5
+        return self.config.natural_reward * np.square(self.screen_info.distance_goal(self.pos_x, self.pos_y) / 0.7)
 
     def save_video(self):
         """Save the saved video of this episode
